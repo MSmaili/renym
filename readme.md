@@ -11,4 +11,19 @@ This tool mainly is created for my brother. He needed a tool to rename, and sill
 
 ## Features
 
-TODO:
+TODO: for me
+
+the desired config flags:
+
+```go
+type Config struct {
+	Path            string // location where to rename by default current "."
+	Mode            string // how do we want to rename? pascal? snake_case?
+	Recursive       bool // recursivly map through directiroes and files
+	Files           bool // enable/disable file search
+	Directories     bool // enable/disable directory search
+	Ignore          []string // way to ignore some files/directories via global pattern
+	NoDefaultIgnore bool // we should add deafult ignore patterns for saffety, TODO: probably check some other libs, what makes sense as deafult. currently .git
+	DryRun          bool // good thing to not run/exectue command just console.log
+}
+```
