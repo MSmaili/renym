@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/MSmaili/rnm/internal/common"
 	"github.com/MSmaili/rnm/internal/engine"
 	"github.com/MSmaili/rnm/internal/fs"
 	"github.com/MSmaili/rnm/internal/walker"
@@ -44,18 +45,14 @@ func runRename(cmd *cobra.Command, args []string) error {
 	engine := engine.NewEngine(cfg.Mode, adapter)
 	renameOp := engine.Plan(pathsToRename)
 
-	return fs.Apply(mapEngineRenameToFsRename(renameOp))
+	return fs.Apply(mapEngineToFS(renameOp))
 }
 
-func mapEngineRenameToFsRename(er []engine.RenameOp) []fs.RenameOp {
-	newRename := make([]fs.RenameOp, len(er))
-
-	for i, r := range er {
-		newRename[i] = fs.RenameOp{
-			OldPath: r.OldPath,
-			NewPath: r.NewPath,
+func mapEngineToFS(ops []engine.RenameOp) []fs.RenameOp {
+	return common.MapSlice(ops, func(e engine.RenameOp) fs.RenameOp {
+		return fs.RenameOp{
+			OldPath: e.OldPath,
+			NewPath: e.NewPath,
 		}
-	}
-
-	return newRename
+	})
 }
