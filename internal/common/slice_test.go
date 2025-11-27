@@ -3,6 +3,8 @@ package common
 import (
 	"strconv"
 	"testing"
+
+	"github.com/MSmaili/rnm/internal/common/assert"
 )
 
 func TestMapSlice(t *testing.T) {
@@ -17,25 +19,7 @@ func TestMapSlice(t *testing.T) {
 				result := MapSlice(input, func(i int) string { return strconv.Itoa(i) })
 				expected := []string{"1", "2", "3", "4", "5"}
 
-				if len(result) != len(expected) {
-					t.Errorf("expected length %d, got %d", len(expected), len(result))
-				}
-				for i := range result {
-					if result[i] != expected[i] {
-						t.Errorf("at index %d: expected %v, got %v", i, expected[i], result[i])
-					}
-				}
-			},
-		},
-		{
-			name: "empty slice returns empty slice",
-			test: func(t *testing.T) {
-				input := []int{}
-				result := MapSlice(input, func(i int) string { return strconv.Itoa(i) })
-
-				if len(result) != 0 {
-					t.Errorf("expected empty slice, got length %d", len(result))
-				}
+				assert.SliceEqual(t, result, expected)
 			},
 		},
 		{
@@ -44,9 +28,16 @@ func TestMapSlice(t *testing.T) {
 				var input []int
 				result := MapSlice(input, func(i int) string { return strconv.Itoa(i) })
 
-				if result != nil {
-					t.Errorf("expected nil, got %v", result)
-				}
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "empty slice returns empty slice",
+			test: func(t *testing.T) {
+				input := []int{}
+				result := MapSlice(input, func(i int) string { return strconv.Itoa(i) })
+
+				assert.Len(t, result, 0)
 			},
 		},
 	}
