@@ -1,11 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"path/filepath"
-	"regexp"
-	"strings"
-
+	"github.com/MSmaili/rnm/internal/engine"
 	"github.com/MSmaili/rnm/internal/fs"
 	"github.com/MSmaili/rnm/internal/walker"
 	"github.com/spf13/cobra"
@@ -32,9 +28,6 @@ func runRename(cmd *cobra.Command, args []string) error {
 		Mode: mode,
 	}
 
-	fmt.Println("calling", cfg.Path)
-	fmt.Println("mode", cfg.Mode)
-
 	adapter := fs.NewAdapter()
 
 	pathsToRename, err := walker.Walk(walker.Config{
@@ -48,42 +41,21 @@ func runRename(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	renameOp := []fs.RenameOp{}
-	for _, path := range pathsToRename {
+	engine := engine.NewEngine(cfg.Mode, adapter)
+	renameOp := engine.Plan(pathsToRename)
 
-		dir := filepath.Dir(path)
-		oldName := filepath.Base(path)
-		ext := filepath.Ext(oldName)
-		nameWithouExt := strings.TrimSuffix(oldName, ext)
+	return fs.Apply(mapEngineRenameToFsRename(renameOp))
+}
 
-		if cfg.Mode == "pascal" {
-			nameWithouExt = Pascal(nameWithouExt)
-			nameWithouExt = adapter.SanitizeName(nameWithouExt)
-		} else {
-			nameWithouExt = Lower(nameWithouExt)
-			nameWithouExt = adapter.SanitizeName(nameWithouExt)
+func mapEngineRenameToFsRename(er []engine.RenameOp) []fs.RenameOp {
+	newRename := make([]fs.RenameOp, len(er))
+
+	for i, r := range er {
+		newRename[i] = fs.RenameOp{
+			OldPath: r.OldPath,
+			NewPath: r.NewPath,
 		}
-
-		newNameWithSuffic := nameWithouExt + ext
-
-		newName := filepath.Join(dir, newNameWithSuffic)
-		renameOp = append(renameOp, fs.RenameOp{OldPath: path, NewPath: newName})
-		fmt.Println(renameOp)
 	}
 
-	return fs.Apply(renameOp)
-}
-
-func Lower(name string) string {
-	return strings.ToLower(name)
-}
-
-var wordRegex = regexp.MustCompile(`[A-Za-z0-9]+`)
-
-func Pascal(name string) string {
-	words := wordRegex.FindAllString(name, -1)
-	for i := range words {
-		words[i] = strings.Title(strings.ToLower(words[i]))
-	}
-	return strings.Join(words, "")
+	return newRename
 }
