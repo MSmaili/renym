@@ -2,7 +2,6 @@ package engine
 
 import (
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -23,10 +22,10 @@ type FileSystemAdapter interface {
 
 type Engine struct {
 	adapter FileSystemAdapter
-	mode    string
+	mode    RenameMode
 }
 
-func NewEngine(mode string, adapter FileSystemAdapter) *Engine {
+func NewEngine(mode RenameMode, adapter FileSystemAdapter) *Engine {
 	return &Engine{
 		mode:    mode,
 		adapter: adapter,
@@ -43,13 +42,7 @@ func (e *Engine) Plan(paths []string) []RenameOp {
 		ext := filepath.Ext(oldName)
 		nameWithouExt := strings.TrimSuffix(oldName, ext)
 
-		if e.mode == "pascal" {
-			nameWithouExt = Pascal(nameWithouExt)
-			nameWithouExt = e.adapter.SanitizeName(nameWithouExt)
-		} else {
-			nameWithouExt = Lower(nameWithouExt)
-			nameWithouExt = e.adapter.SanitizeName(nameWithouExt)
-		}
+		nameWithouExt = e.mode.Transform(nameWithouExt)
 
 		newNameWithSuffic := nameWithouExt + ext
 
@@ -61,14 +54,4 @@ func (e *Engine) Plan(paths []string) []RenameOp {
 
 func Lower(name string) string {
 	return strings.ToLower(name)
-}
-
-var wordRegex = regexp.MustCompile(`[A-Za-z0-9]+`)
-
-func Pascal(name string) string {
-	words := wordRegex.FindAllString(name, -1)
-	for i := range words {
-		words[i] = strings.Title(strings.ToLower(words[i]))
-	}
-	return strings.Join(words, "")
 }
