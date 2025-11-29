@@ -68,3 +68,7 @@ func (a WindowsFSAdapter) SanitizeName(name string) string {
 	}
 	return result
 }
+
+func (a WindowsFSAdapter) IsCaseSensitive() bool {
+	return false
+}
