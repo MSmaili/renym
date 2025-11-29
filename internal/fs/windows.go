@@ -1,20 +1,15 @@
-//go:build windows
-
 package fs
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 type WindowsFSAdapter struct{}
 
 var (
-	windowsInvalidChars  = []string{"<", ">", ":", "\"", "/", "\\", "|", "?", "*"}
-	windowsReservedNames = map[string]bool{
-		"CON": true, "PRN": true, "AUX": true, "NUL": true,
-		"COM1": true, "COM2": true, "COM3": true, "COM4": true, "COM5": true,
-		"COM6": true, "COM7": true, "COM8": true, "COM9": true,
-		"LPT1": true, "LPT2": true, "LPT3": true, "LPT4": true, "LPT5": true,
-		"LPT6": true, "LPT7": true, "LPT8": true, "LPT9": true,
-	}
+	invalidRunes    = `<>:"/\|?*`
+	reservedPattern = regexp.MustCompile(`^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:$|[^A-Za-z0-9])`)
 )
 
 func baseNameWithoutExt(name string) string {
@@ -25,36 +20,51 @@ func baseNameWithoutExt(name string) string {
 	return name
 }
 
+func isReservedName(name string) bool {
+	base := baseNameWithoutExt(name)
+	return reservedPattern.MatchString(base)
+}
+
+func sanitizeRune(r rune) rune {
+	if r < 32 || (r >= 0xD800 && r <= 0xDFFF) {
+		return '_'
+	}
+	if strings.ContainsRune(invalidRunes, r) {
+		return '_'
+	}
+	return r
+}
+
 func (a WindowsFSAdapter) IsValidName(name string) bool {
 	if name == "" || name == "." || name == ".." {
 		return false
 	}
 
-	for _, char := range windowsInvalidChars {
-		if strings.Contains(name, char) {
+	if strings.ContainsAny(name, invalidRunes) {
+		return false
+	}
+
+	if strings.HasSuffix(name, " ") || strings.HasSuffix(name, ".") {
+		return false
+	}
+
+	for _, r := range name {
+		if r < 32 {
+			return false
+		}
+		if r >= 0xD800 && r <= 0xDFFF {
 			return false
 		}
 	}
 
-	return windowsReservedNames[baseNameWithoutExt(name)]
+	return !isReservedName(name)
 }
 
 func (a WindowsFSAdapter) SanitizeName(name string) string {
-	result := name
-
-	for _, char := range windowsInvalidChars {
-		result = strings.ReplaceAll(result, char, "_")
-	}
-
+	result := strings.Map(sanitizeRune, name)
 	result = strings.TrimRight(result, " .")
-
-	if windowsReservedNames[baseNameWithoutExt(result)] {
+	if result == "" || isReservedName(result) {
 		result = "_" + result
 	}
-
 	return result
-}
-
-func (a WindowsFSAdapter) IsCaseSensitive() bool {
-	return false
 }
