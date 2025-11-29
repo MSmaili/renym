@@ -8,8 +8,6 @@ import (
 // TODO: here we should do all the planning for rename
 // take care of file collision
 // take care of skiped files
-// take care of mods
-// take care of spliting words
 
 type RenameOp struct {
 	OldPath string
