@@ -21,6 +21,10 @@ type Config struct {
 func init() {
 	rootCmd.Flags().StringVarP(&path, "path", "p", ".", "Path to directory or file")
 	rootCmd.Flags().StringVarP(&mode, "mode", "m", "lower", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
+
+	rootCmd.RegisterFlagCompletionFunc("mode", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "expr"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 func runRename(cmd *cobra.Command, args []string) error {
