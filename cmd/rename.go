@@ -89,46 +89,44 @@ func runRename(cmd *cobra.Command, args []string) error {
 	engine := engine.NewEngine(renameMode, adapter)
 	planResult := engine.Plan(pathsToRename)
 
-	printPlanSummary(planResult)
-
 	if len(planResult.Operations) == 0 {
 		fmt.Println("\n✓ No files to rename")
 		return nil
 	}
+
+	fmt.Printf("\nProcessing %d file(s)...\n", len(planResult.Operations))
 
 	err = fs.Apply(mapEngineToFS(planResult.Operations), cfg.DryRun)
 	if err != nil {
 		return fmt.Errorf("rename operation failed: %w", err)
 	}
 
-	printSuccessSummary(planResult)
+	printResults(planResult, cfg.DryRun)
 
 	return nil
 }
 
-func printPlanSummary(result engine.PlanResult) {
-	totalFiles := len(result.Operations) + len(result.Skipped)
-
+func printResults(result engine.PlanResult, dryRun bool) {
+	// Success header
 	fmt.Println("\n" + strings.Repeat("=", 60))
-	fmt.Println("  RENAME PLAN SUMMARY")
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Printf("  Total files scanned:  %d\n", totalFiles)
-	fmt.Printf("  Files to rename:      %d\n", len(result.Operations))
-	fmt.Printf("  Files to skip:        %d\n", len(result.Skipped))
-	fmt.Printf("  Collisions detected:  %d\n", len(result.Collisions))
-	fmt.Println(strings.Repeat("=", 60))
-
-	if len(result.Collisions) > 0 {
-		fmt.Println("\n⚠ COLLISIONS DETECTED:")
-		fmt.Println(strings.Repeat("-", 60))
-		for i, collision := range result.Collisions {
-			fmt.Printf("  %d. Multiple files trying to rename to:\n", i+1)
-			fmt.Printf("     → %s\n", collision.Target)
-			fmt.Printf("     Sources: %s, %s\n", collision.Source1, collision.Source2)
-		}
-		fmt.Println(strings.Repeat("-", 60))
+	if dryRun {
+		fmt.Println("  DRY RUN - No files were actually renamed")
+	} else {
+		fmt.Println("  ✓ COMPLETED SUCCESSFULLY")
+		fmt.Println(strings.Repeat("=", 60))
+		fmt.Printf("  Files renamed:   %d\n", len(result.Operations))
 	}
 
+	// Show warnings if any
+	if len(result.Skipped) > 0 {
+		fmt.Printf("  Files skipped:   %d\n", len(result.Skipped))
+	}
+	if len(result.Collisions) > 0 {
+		fmt.Printf("  Collisions:      %d\n", len(result.Collisions))
+	}
+	fmt.Println(strings.Repeat("=", 60))
+
+	// Show skipped files details
 	if len(result.Skipped) > 0 {
 		fmt.Println("\n⊘ SKIPPED FILES:")
 		fmt.Println(strings.Repeat("-", 60))
@@ -142,34 +140,22 @@ func printPlanSummary(result engine.PlanResult) {
 		fmt.Println(strings.Repeat("-", 60))
 	}
 
-	if len(result.Operations) > 0 {
-		fmt.Println("\n→ RENAME OPERATIONS:")
-		fmt.Println(strings.Repeat("-", 60))
-		limit := min(len(result.Operations), 10)
-		for i := range limit {
-			op := result.Operations[i]
-			fmt.Printf("  %d. %s\n", i+1, filepath.Base(op.OldPath))
-			fmt.Printf("     → %s\n", filepath.Base(op.NewPath))
-		}
-		if len(result.Operations) > 10 {
-			fmt.Printf("  ... and %d more files\n", len(result.Operations)-10)
-		}
-		fmt.Println(strings.Repeat("-", 60))
-	}
-}
-
-func printSuccessSummary(result engine.PlanResult) {
-	fmt.Println("\n" + strings.Repeat("=", 60))
-	fmt.Println("  ✓ RENAME COMPLETED SUCCESSFULLY")
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Printf("  Files renamed:   %d\n", len(result.Operations))
-	if len(result.Skipped) > 0 {
-		fmt.Printf("  Files skipped:   %d\n", len(result.Skipped))
-	}
+	// Show collision details
 	if len(result.Collisions) > 0 {
-		fmt.Printf("  Collisions:      %d\n", len(result.Collisions))
+		fmt.Println("\n⚠ COLLISIONS:")
+		fmt.Println(strings.Repeat("-", 60))
+		for i, collision := range result.Collisions {
+			fmt.Printf("  %d. Multiple files trying to rename to:\n", i+1)
+			fmt.Printf("     → %s\n", filepath.Base(collision.Target))
+			fmt.Printf("     Sources: %s, %s\n", filepath.Base(collision.Source1), filepath.Base(collision.Source2))
+			if i < len(result.Collisions)-1 {
+				fmt.Println()
+			}
+		}
+		fmt.Println(strings.Repeat("-", 60))
 	}
-	fmt.Println(strings.Repeat("=", 60) + "\n")
+
+	fmt.Println()
 }
 
 func mapEngineToFS(ops []engine.RenameOp) []fs.RenameOp {
