@@ -23,13 +23,21 @@ var ModeRegistry = map[string]RenameMode{
 type UpperCaseMode struct{}
 
 func (u UpperCaseMode) Transform(input string) string {
-	return strings.ToUpper(input)
+	words := splitWords(input)
+	for i, w := range words {
+		words[i] = strings.ToUpper(w)
+	}
+	return strings.Join(words, " ")
 }
 
 type LowerCaseMode struct{}
 
 func (u LowerCaseMode) Transform(input string) string {
-	return strings.ToLower(input)
+	words := splitWords(input)
+	for i, w := range words {
+		words[i] = strings.ToLower(w)
+	}
+	return strings.Join(words, " ")
 }
 
 type PascalCaseMode struct{}

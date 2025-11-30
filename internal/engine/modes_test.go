@@ -46,14 +46,14 @@ func TestModes(t *testing.T) {
 		in   string
 		want string
 	}{
-		{"upper_HelloWorld", "upper", "HelloWorld", "HELLOWORLD"},
-		{"upper_FOObar", "upper", "FOObar", "FOOBAR"},
-		{"upper_fooBar", "upper", "fooBar", "FOOBAR"},
-		{"upper_HTTPServer", "upper", "HTTPServer", "HTTPSERVER"},
+		{"upper_HelloWorld", "upper", "HelloWorld", "HELLO WORLD"},
+		{"upper_FOObar", "upper", "FOOBar", "FOO BAR"},
+		{"upper_fooBar", "upper", "fooBar", "FOO BAR"},
+		{"upper_HTTPServer", "upper", "HTTPServer", "HTTP SERVER"},
 
-		{"lower_fooBar", "lower", "fooBar", "foobar"},
-		{"lower_FOObar", "lower", "FOObar", "foobar"},
-		{"lower_HelloWorld", "lower", "HelloWorld", "helloworld"},
+		{"lower_fooBar", "lower", "fooBar", "foo bar"},
+		{"lower_FOObar", "lower", "FOOBar", "foo bar"},
+		{"lower_HelloWorld", "lower", "HelloWorld", "hello world"},
 
 		{"pascal_hello_world", "pascal", "hello world", "HelloWorld"},
 		{"pascal_ID_test", "pascal", "ID test", "IDTest"},
