@@ -3,6 +3,7 @@ package engine
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -151,4 +152,22 @@ func (e *Engine) addCollision(result *PlanResult, source1, source2, target strin
 		Source2: source2,
 		Target:  target,
 	})
+}
+
+// pathDepth returns the depth of a path by counting separators
+func pathDepth(path string) int {
+	return strings.Count(path, string(filepath.Separator))
+}
+
+// sortPathsByDepth sorts paths with deepest paths first to ensure
+// safe recursive directory renaming (children before parents)
+func (e *Engine) SortPathsByDepth(paths []string) []string {
+	sorted := make([]string, len(paths))
+	copy(sorted, paths)
+
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return pathDepth(sorted[i]) > pathDepth(sorted[j])
+	})
+
+	return sorted
 }

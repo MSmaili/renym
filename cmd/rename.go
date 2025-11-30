@@ -92,6 +92,13 @@ func runRename(cmd *cobra.Command, args []string) error {
 
 	renameMode := engine.ModeRegistry[cfg.Mode]
 	engine := engine.NewEngine(renameMode, adapter)
+
+	// Sort paths by depth (deepest first) for safe recursive directory renames
+	// Only needed when renaming directories to avoid parent path invalidation
+	if cfg.Directories {
+		pathsToRename = engine.SortPathsByDepth(pathsToRename)
+	}
+
 	planResult := engine.Plan(pathsToRename)
 
 	if len(planResult.Operations) == 0 {
