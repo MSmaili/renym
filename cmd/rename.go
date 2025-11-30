@@ -20,6 +20,7 @@ var (
 	dirsOnly        bool
 	ignore          []string
 	noDefaultIgnore bool
+	dryRun          bool
 )
 
 type Config struct {
@@ -30,6 +31,7 @@ type Config struct {
 	Files           bool
 	Ignore          []string
 	NoDefaultIgnore bool
+	DryRun          bool
 }
 
 func init() {
@@ -47,6 +49,9 @@ func init() {
 	rootCmd.Flags().StringSliceVar(&ignore, "ignore", nil, "Glob pattern to ignore (can be specified multiple times)")
 	rootCmd.Flags().BoolVar(&noDefaultIgnore, "no-default-ignore", false, "Disable default ignore patterns (.git, .svn, .hg)")
 
+	// Output flags
+	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be renamed without actually renaming")
+
 	// Modes  flags
 	rootCmd.Flags().StringVarP(&mode, "mode", "m", "lower", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
 	rootCmd.RegisterFlagCompletionFunc("mode", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -63,6 +68,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 		Files:           !dirsOnly,
 		Ignore:          ignore,
 		NoDefaultIgnore: noDefaultIgnore,
+		DryRun:          dryRun,
 	}
 
 	adapter := fs.NewAdapter()
@@ -90,7 +96,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	err = fs.Apply(mapEngineToFS(planResult.Operations))
+	err = fs.Apply(mapEngineToFS(planResult.Operations), cfg.DryRun)
 	if err != nil {
 		return fmt.Errorf("rename operation failed: %w", err)
 	}
