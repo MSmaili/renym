@@ -77,9 +77,11 @@ func runRename(cmd *cobra.Command, args []string) error {
 
 	renameMode := engine.ModeRegistry[cfg.Mode]
 	engine := engine.NewEngine(renameMode, adapter)
-	renameOp := engine.Plan(pathsToRename)
+	planResult := engine.Plan(pathsToRename)
 
-	return fs.Apply(mapEngineToFS(renameOp))
+	// TODO: Handle planResult andSkipped and planResult
+
+	return fs.Apply(mapEngineToFS(planResult.Operations))
 }
 
 func mapEngineToFS(ops []engine.RenameOp) []fs.RenameOp {
