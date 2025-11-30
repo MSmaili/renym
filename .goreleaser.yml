@@ -6,7 +6,7 @@ before:
 
 builds:
   - id: rnm
-    main: ./cmd/rnm
+    main: ./cmd
     binary: rnm
     env:
       - CGO_ENABLED=0
@@ -35,7 +35,7 @@ archives:
       - goos: windows
         format: zip
     files:
-      - README.md
+      - readme.md
 
 checksum:
   name_template: 'checksums.txt'
