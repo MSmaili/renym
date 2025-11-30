@@ -118,14 +118,14 @@ func splitWords(s string) []string {
 	flush := func() {
 		if len(cur) > 0 {
 			words = append(words, string(cur))
-			cur = cur[:0]
+			cur = cur[:0] //reset
 		}
 	}
 
-	for i := 0; i < len(r); i++ {
-		c := r[i]
+	for i := range r {
+		curr := r[i]
 
-		if isDelimiter(c) {
+		if isDelimiter(curr) {
 			flush()
 			continue
 		}
@@ -139,11 +139,11 @@ func splitWords(s string) []string {
 			next = r[i+1]
 		}
 
-		if i > 0 && isBoundary(prev, c, next) {
+		if i > 0 && isBoundary(prev, curr, next) {
 			flush()
 		}
 
-		cur = append(cur, c)
+		cur = append(cur, curr)
 	}
 
 	flush()
@@ -170,20 +170,42 @@ func isDelimiter(r rune) bool {
 	return r == '_' || r == '-' || r == '.' || r == '/' || r == '\\' || unicode.IsSpace(r)
 }
 
-func isDigitBoundary(prev, r rune) bool {
-	return (unicode.IsDigit(prev) && !unicode.IsDigit(r)) ||
-		(!unicode.IsDigit(prev) && unicode.IsDigit(r))
+// isDigitBoundary detects transitions between digits and non-digits.
+// This helps split words at number boundaries.
+//
+// Examples:
+//   - "test1foo" -> boundary between '1' and 'f' (digit to letter)
+//   - "foo2bar"  -> boundary between 'o' and '2' (letter to digit)
+//   - "123abc"   -> boundary between '3' and 'a' (digit to letter)
+func isDigitBoundary(prev, curr rune) bool {
+	return (unicode.IsDigit(prev) && !unicode.IsDigit(curr)) ||
+		(!unicode.IsDigit(prev) && unicode.IsDigit(curr))
 }
 
-func isAcronymBoundary(prev, r, next rune) bool {
+// isAcronymBoundary detects the transition point within acronyms followed by regular words.
+// It identifies where an acronym ends and a new word begins by checking for the pattern
+// of two uppercase letters followed by a lowercase letter.
+//
+// Examples:
+//   - "HTTPServer" -> boundary between 'P' and 'S' (HTTP|Server)
+//   - "XMLParser"  -> boundary between 'L' and 'P' (XML|Parser)
+//   - "IOError"    -> boundary between 'O' and 'E' (IO|Error)
+func isAcronymBoundary(prev, curr, next rune) bool {
 	if next == 0 {
 		return false
 	}
 	return unicode.IsUpper(prev) &&
-		unicode.IsUpper(r) &&
+		unicode.IsUpper(curr) &&
 		unicode.IsLower(next)
 }
 
+// isLatinCaseBoundary detects transitions from lowercase to uppercase in Latin characters.
+// This is the standard camelCase boundary detection for Latin alphabet characters only.
+//
+// Examples:
+//   - "fooBar"     -> boundary between 'o' and 'B' (foo|Bar)
+//   - "myVariable" -> boundary between 'y' and 'V' (my|Variable)
+//   - "testCase"   -> boundary between 't' and 'C' (test|Case)
 func isLatinCaseBoundary(prev, curr rune) bool {
 	if !unicode.In(prev, unicode.Latin) || !unicode.In(curr, unicode.Latin) {
 		return false
