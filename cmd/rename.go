@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/MSmaili/rnm/internal/cli"
 	"github.com/MSmaili/rnm/internal/common"
 	"github.com/MSmaili/rnm/internal/engine"
 	"github.com/MSmaili/rnm/internal/fs"
@@ -57,6 +58,10 @@ func init() {
 	rootCmd.RegisterFlagCompletionFunc("mode", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "expr"}, cobra.ShellCompDirectiveNoFileComp
 	})
+}
+
+func validateFlags(cmd *cobra.Command, args []string) error {
+	return cli.ValidateFlags(mode, path)
 }
 
 func runRename(cmd *cobra.Command, args []string) error {

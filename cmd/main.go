@@ -8,10 +8,11 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "rnm [flags]",
-	Short: "Fast, safe, cross-platform file rename tool",
-	Long:  `rename your beautiful files boyy`,
-	RunE:  runRename,
+	Use:     "rnm [flags]",
+	Short:   "Fast, safe, cross-platform file rename tool",
+	Long:    `A CLI tool for renaming your files. It supports different modes, and recursive renaming`,
+	PreRunE: validateFlags,
+	RunE:    runRename,
 }
 
 func main() {
