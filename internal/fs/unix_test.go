@@ -5,7 +5,7 @@ package fs
 import (
 	"testing"
 
-	"github.com/MSmaili/rnm/internal/common/assert"
+	"github.com/MSmaili/rnm/internal/common/testutils/assert"
 )
 
 func TestUnixFSAdapterIsValidName(t *testing.T) {
@@ -66,6 +66,7 @@ func TestUnixFSAdapterSanitizeName(t *testing.T) {
 		{"empty string unchanged", "", ""},
 		{"only slashes", "///", "___"},
 		{"sanitize null byte", "he\x00llo", "he_llo"},
+		{"removes the default characters", "$file-&(1)", "file-1"},
 	}
 
 	for _, tt := range tests {

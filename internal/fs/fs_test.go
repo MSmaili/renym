@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/MSmaili/rnm/internal/common/testutils"
 )
 
 func TestApply(t *testing.T) {
@@ -71,7 +73,7 @@ func TestApply(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			root := t.TempDir()
 
-			createFiles(t, root, tt.existing)
+			testutils.CreateFiles(t, root, tt.existing)
 
 			opsAbs := make([]RenameOp, len(tt.ops))
 			for i, op := range tt.ops {
@@ -81,24 +83,9 @@ func TestApply(t *testing.T) {
 				}
 			}
 
-			err := Apply(opsAbs)
+			err := Apply(opsAbs, false)
 
 			tt.test(t, root, opsAbs, err)
 		})
-	}
-}
-
-// TODO: think where should this file belong?? we have same in two tests
-// probably a common helpers
-func createFiles(t *testing.T, root string, files []string) {
-	t.Helper()
-	for _, f := range files {
-		path := filepath.Join(root, f)
-		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-			t.Fatalf("mkdir failed: %v", err)
-		}
-		if err := os.WriteFile(path, []byte("x"), 0644); err != nil {
-			t.Fatalf("write failed: %v", err)
-		}
 	}
 }

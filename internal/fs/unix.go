@@ -24,7 +24,8 @@ func (a *UnixFSAdapter) IsValidName(name string) bool {
 }
 
 func (a *UnixFSAdapter) SanitizeName(name string) string {
-	result := strings.ReplaceAll(name, "/", "_")
+	result := sanitizeDefaultChars(name)
+	result = strings.ReplaceAll(result, "/", "_")
 	result = strings.ReplaceAll(result, "\x00", "_")
 	return result
 }

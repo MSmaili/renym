@@ -61,7 +61,8 @@ func (a WindowsFSAdapter) IsValidName(name string) bool {
 }
 
 func (a WindowsFSAdapter) SanitizeName(name string) string {
-	result := strings.Map(sanitizeRune, name)
+	result := sanitizeDefaultChars(name)
+	result = strings.Map(sanitizeRune, result)
 	result = strings.TrimRight(result, " .")
 	if result == "" || isReservedName(result) {
 		result = "_" + result

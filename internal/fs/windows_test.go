@@ -3,7 +3,7 @@ package fs
 import (
 	"testing"
 
-	"github.com/MSmaili/rnm/internal/common/assert"
+	"github.com/MSmaili/rnm/internal/common/testutils/assert"
 )
 
 func TestBaseNameWithoutExt(t *testing.T) {
@@ -120,6 +120,7 @@ func TestWindowsFSAdapter_SanitizeName(t *testing.T) {
 		{"not reserved similar name", "CONSOLE", "CONSOLE"},
 
 		{"empty string replaces with _", "", "_"},
+		{"removes the default characters", "$file-&(1)", "file-1"},
 	}
 
 	for _, tt := range tests {
