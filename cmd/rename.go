@@ -138,20 +138,6 @@ func printResults(result engine.PlanResult, dryRun bool) {
 	}
 	fmt.Println(strings.Repeat("=", 60))
 
-	// Show skipped files details
-	if len(result.Skipped) > 0 {
-		fmt.Println("\n⊘ SKIPPED FILES:")
-		fmt.Println(strings.Repeat("-", 60))
-		for i, skipped := range result.Skipped {
-			fmt.Printf("  %d. %s\n", i+1, filepath.Base(skipped.Path))
-			fmt.Printf("     Reason: %s\n", skipped.Reason)
-			if i < len(result.Skipped)-1 {
-				fmt.Println()
-			}
-		}
-		fmt.Println(strings.Repeat("-", 60))
-	}
-
 	// Show collision details
 	if len(result.Collisions) > 0 {
 		fmt.Println("\n⚠ COLLISIONS:")
