@@ -159,7 +159,7 @@ func pathDepth(path string) int {
 	return strings.Count(path, string(filepath.Separator))
 }
 
-// sortPathsByDepth sorts paths with deepest paths first to ensure
+// SortPathsByDepth sorts paths with deepest paths first to ensure
 // safe recursive directory renaming (children before parents)
 func (e *Engine) SortPathsByDepth(paths []string) []string {
 	sorted := make([]string, len(paths))

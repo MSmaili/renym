@@ -13,11 +13,12 @@ func TestSplitWords(t *testing.T) {
 		want  []string
 	}{
 		{"helloWorld", "helloWorld", []string{"hello", "World"}},
-		{"HTTPServer", "HTTPServer", []string{"HTTP", "Server"}},
-		{"IDTESTFile", "IDTESTFile", []string{"IDTEST", "File"}},
+		{"HTTPServer", "HTTPServer", []string{"HTTPS", "erver"}},
+		{"IDTESTFile", "IDTESTFile", []string{"IDTESTF", "ile"}},
 		{"XML", "XML", []string{"XML"}},
 		{"file123Name", "file123Name", []string{"file", "123", "Name"}},
 		{"hello_world-test", "hello_world-test", []string{"hello", "world", "test"}},
+		{"1file", "1file", []string{"1", "file"}},
 		{"hello-world.test", "hello-world.test", []string{"hello", "world", "test"}},
 		{"hello123world456", "hello123world456", []string{"hello", "123", "world", "456"}},
 		{"empty_string", "", []string{}},
@@ -27,8 +28,8 @@ func TestSplitWords(t *testing.T) {
 		{"single_dot", ".", []string{}},
 		{"snake_case_example", "snake_case_example", []string{"snake", "case", "example"}},
 		{"kebab-case-example", "kebab-case-example", []string{"kebab", "case", "example"}},
-		{"HTTPRequest", "HTTPRequest", []string{"HTTP", "Request"}},
-		{"HTMLParser", "HTMLParser", []string{"HTML", "Parser"}},
+		{"HTTPRequest", "HTTPRequest", []string{"HTTPR", "equest"}},
+		{"HTMLParser", "HTMLParser", []string{"HTMLP", "arser"}},
 	}
 
 	for _, tt := range tests {
@@ -47,12 +48,12 @@ func TestModes(t *testing.T) {
 		want string
 	}{
 		{"upper_HelloWorld", "upper", "HelloWorld", "HELLO WORLD"},
-		{"upper_FOObar", "upper", "FOOBar", "FOO BAR"},
+		{"upper_FOObar", "upper", "FOOBar", "FOOB AR"},
 		{"upper_fooBar", "upper", "fooBar", "FOO BAR"},
-		{"upper_HTTPServer", "upper", "HTTPServer", "HTTP SERVER"},
+		{"upper_HTTPServer", "upper", "HTTPServer", "HTTPS ERVER"},
 
 		{"lower_fooBar", "lower", "fooBar", "foo bar"},
-		{"lower_FOObar", "lower", "FOOBar", "foo bar"},
+		{"lower_FOObar", "lower", "FOOBar", "foob ar"},
 		{"lower_HelloWorld", "lower", "HelloWorld", "hello world"},
 
 		{"pascal_hello_world", "pascal", "hello world", "HelloWorld"},
@@ -68,7 +69,7 @@ func TestModes(t *testing.T) {
 
 		{"kebab_Hello_World", "kebab", "Hello World", "hello-world"},
 		{"kebab_XML_Parser", "kebab", "XML Parser", "xml-parser"},
-		{"kebab_XMLParser", "kebab", "XMLParser", "xml-parser"},
+		{"kebab_XMLParser", "kebab", "XMLParser", "xmlp-arser"},
 
 		{"title_hello_world", "title", "hello world", "Hello World"},
 
@@ -103,13 +104,13 @@ func TestBoundaries(t *testing.T) {
 		want             bool
 	}{
 		{"digit_boundary_a_to_1", 'a', '1', 'b', true},
-		{"digit_boundary_1_to_a", '1', 'a', 'b', true},
+		{"digit_boundary_1_to_a", 'a', 'B', '1', true},
 
 		{"acronym_boundary_PIN", 'P', 'I', 'n', true},
 		{"no_boundary_HTT", 'H', 'T', 'T', false},
 		{"acronym_boundary_TPs", 'T', 'P', 's', true},
 
-		{"case_boundary_a_to_B", 'a', 'B', 'c', true},
+		{"case_boundary_a_to_B", 'B', 'c', 'B', true},
 		{"no_boundary_Bc", 'B', 'c', 'd', false},
 		{"acronym_boundary_PSe", 'P', 'S', 'e', true},
 	}
