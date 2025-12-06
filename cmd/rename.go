@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -43,8 +44,8 @@ func init() {
 	rootCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Recursively rename in subdirectories")
 
 	// dirs flags
-	rootCmd.Flags().BoolVarP(&directories, "directories", "d", false, "Include directories in rename")
-	rootCmd.Flags().BoolVarP(&dirsOnly, "dirs-only", "D", false, "Rename only directories (not files)")
+	rootCmd.Flags().BoolVarP(&directories, "directories", "d", false, "Include directories in rename (default = false)")
+	rootCmd.Flags().BoolVarP(&dirsOnly, "dirs-only", "D", false, "Rename only directories, skip files (default = false)")
 
 	// Filter flags
 	rootCmd.Flags().StringSliceVar(&ignore, "ignore", nil, "Glob pattern to ignore (can be specified multiple times)")
@@ -54,13 +55,30 @@ func init() {
 	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be renamed without actually renaming")
 
 	// Modes  flags
-	rootCmd.Flags().StringVarP(&mode, "mode", "m", "lower", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
+	rootCmd.Flags().StringVarP(&mode, "mode", "m", "", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
 	rootCmd.RegisterFlagCompletionFunc("mode", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "expr"}, cobra.ShellCompDirectiveNoFileComp
+		return []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title"}, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	rootCmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		msg := err.Error()
+
+		if strings.Contains(msg, "flag needs an argument") && (strings.HasSuffix(msg, "-m") || strings.HasSuffix(msg, "--mode")) {
+			fmt.Println("❗ The --mode flag requires a value.")
+			fmt.Println("Available modes: upper, lower, pascal, camel, snake, kebab, title")
+			fmt.Println("\nRun rnm --help for more info")
+			os.Exit(1)
+		}
+
+		return err
 	})
 }
 
 func validateFlags(cmd *cobra.Command, args []string) error {
+	if !cmd.Flags().Changed("mode") {
+		_ = cmd.Help()
+		os.Exit(0)
+	}
 	return cli.ValidateFlags(mode, path)
 }
 
