@@ -13,10 +13,25 @@ import (
 const historyDir = ".rnm-history"
 const limitNumberOfHistoryFiles = 5
 
+func resolveDir(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	if !info.IsDir() {
+		return filepath.Dir(path), nil
+	}
+	return path, nil
+}
+
 func Save(basePath string, e Entry) error {
+	basePath, err := resolveDir(basePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve directory: %w", err)
+	}
 
 	dir := filepath.Join(basePath, historyDir)
-	err := os.MkdirAll(dir, 0755)
+	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create history directory: %w", err)
 	}

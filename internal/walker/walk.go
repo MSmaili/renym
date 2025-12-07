@@ -2,6 +2,7 @@ package walker
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 )
 
@@ -14,7 +15,26 @@ type Config struct {
 	NoDefaultIgnore bool
 }
 
+func isFile(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+	return !info.IsDir(), nil
+}
+
 func Walk(cfg Config) ([]string, error) {
+	isFile, err := isFile(cfg.Path)
+	if err != nil {
+		return nil, err
+	}
+	if isFile {
+		if cfg.Files {
+			return []string{cfg.Path}, nil
+		}
+		return []string{}, nil
+	}
+
 	paths := make([]string, 0, 100)
 
 	ignorePatterns := cfg.Ignore
@@ -22,7 +42,7 @@ func Walk(cfg Config) ([]string, error) {
 		ignorePatterns = append(DefaultIgnorePatterns, cfg.Ignore...)
 	}
 
-	err := filepath.WalkDir(cfg.Path, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(cfg.Path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

@@ -3,10 +3,11 @@ package walker
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/MSmaili/rnm/internal/common/testutils/assert"
 )
 
 func TestWalk(t *testing.T) {
@@ -104,34 +105,128 @@ func TestWalk(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Build temp tree
 			root := t.TempDir()
 			createFiles(t, root, tt.files)
 
-			// Set root path
 			cfg := tt.cfg
 			cfg.Path = root
 
 			got, err := Walk(cfg)
-			if err != nil {
-				t.Fatalf("Walk error: %v", err)
-			}
+			assert.Nil(t, err)
 
-			// Convert full paths → relative paths for easy comparison
 			for i := range got {
 				rel, _ := filepath.Rel(root, got[i])
 				got[i] = rel
 			}
 
-			// Sorting so order doesn’t matter
 			sort.Strings(got)
 			sort.Strings(tt.want)
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("unexpected result.\nwant: %#v\ngot:  %#v", tt.want, got)
+			assert.SliceEqual(t, got, tt.want)
+		})
+	}
+}
+
+func TestWalkSingleFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		cfg       Config
+		wantCount int
+	}{
+		{
+			name: "single file path with Files=true returns the file",
+			cfg: Config{
+				Files: true,
+			},
+			wantCount: 1,
+		},
+		{
+			name: "single file path with Files=false returns empty",
+			cfg: Config{
+				Files: false,
+			},
+			wantCount: 0,
+		},
+		{
+			name: "single file path with Directories=true and Files=false returns empty",
+			cfg: Config{
+				Directories: true,
+				Files:       false,
+			},
+			wantCount: 0,
+		},
+		{
+			name: "single file path with both flags returns the file",
+			cfg: Config{
+				Directories: true,
+				Files:       true,
+			},
+			wantCount: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			filePath := filepath.Join(root, "single-file.txt")
+			err := os.WriteFile(filePath, []byte("content"), 0644)
+			assert.Nil(t, err)
+
+			cfg := tt.cfg
+			cfg.Path = filePath
+
+			got, err := Walk(cfg)
+			assert.Nil(t, err)
+			assert.Len(t, got, tt.wantCount)
+
+			if tt.wantCount == 1 {
+				assert.Equal(t, got[0], filePath)
 			}
 		})
 	}
+}
+
+func TestIsFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    func(root string) string
+		expected bool
+	}{
+		{
+			name: "returns true for file",
+			setup: func(root string) string {
+				path := filepath.Join(root, "file.txt")
+				os.WriteFile(path, []byte(""), 0644)
+				return path
+			},
+			expected: true,
+		},
+		{
+			name: "returns false for directory",
+			setup: func(root string) string {
+				path := filepath.Join(root, "dir")
+				os.MkdirAll(path, 0755)
+				return path
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			path := tt.setup(root)
+
+			result, err := isFile(path)
+			assert.Nil(t, err)
+			assert.Equal(t, result, tt.expected)
+		})
+	}
+}
+
+func TestIsFileNonExistent(t *testing.T) {
+	_, err := isFile("/non/existent/path")
+	assert.NotNil(t, err)
 }
 
 func createFiles(t *testing.T, root string, files []string) {
