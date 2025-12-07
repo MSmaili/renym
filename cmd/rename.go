@@ -27,6 +27,7 @@ var (
 	noDefaultIgnore bool
 	dryRun          bool
 	skipHistory     bool
+	showVersion     bool
 )
 
 type Config struct {
@@ -62,6 +63,9 @@ func init() {
 	// Backup
 	rootCmd.Flags().BoolVarP(&skipHistory, "skip-history", "", false, "Skip adding a json file for operation history which can be used for undo")
 
+	// Version
+	rootCmd.Flags().BoolVarP(&showVersion, "version", "V", false, "Show the current installed version")
+
 	// Modes  flags
 	rootCmd.Flags().StringVarP(&mode, "mode", "m", "", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
 	rootCmd.RegisterFlagCompletionFunc("mode", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -83,6 +87,10 @@ func init() {
 }
 
 func validateFlags(cmd *cobra.Command, args []string) error {
+	if showVersion {
+		fmt.Printf("rnm version %s\n", version.Version)
+		os.Exit(0)
+	}
 	if !cmd.Flags().Changed("mode") {
 		_ = cmd.Help()
 		os.Exit(0)
