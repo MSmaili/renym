@@ -3,6 +3,7 @@ package engine
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/MSmaili/rnm/internal/common/testutils/assert"
@@ -10,6 +11,7 @@ import (
 
 type mockAdapter struct {
 	caseSensitive bool
+	sanitize      func(string) string
 }
 
 func (m *mockAdapter) IsCaseSensitive() bool {
@@ -17,6 +19,9 @@ func (m *mockAdapter) IsCaseSensitive() bool {
 }
 
 func (m *mockAdapter) SanitizeName(name string) string {
+	if m.sanitize != nil {
+		return m.sanitize(name)
+	}
 	return name
 }
 
@@ -228,6 +233,7 @@ func TestComputeNewPath(t *testing.T) {
 	tests := []struct {
 		name     string
 		mode     RenameMode
+		sanitize func(string) string
 		input    string
 		expected string
 	}{
@@ -255,11 +261,42 @@ func TestComputeNewPath(t *testing.T) {
 			input:    "/path/filename",
 			expected: "/path/renamed",
 		},
+		{
+			name:     "sanitize_then_transform",
+			mode:     mockMode{transform: func(s string) string { return strings.ToUpper(s) }},
+			sanitize: func(s string) string { return strings.ReplaceAll(s, "(", "") },
+			input:    "/path/file(1).txt",
+			expected: "/path/FILE1).txt",
+		},
+		{
+			name: "sanitize_removes_parentheses_before_transform",
+			mode: mockMode{transform: func(s string) string { return s }},
+			sanitize: func(s string) string {
+				s = strings.ReplaceAll(s, "(", "")
+				s = strings.ReplaceAll(s, ")", "")
+				return s
+			},
+			input:    "/path/new file name (1) - Copy (1).txt",
+			expected: "/path/new file name 1 - Copy 1.txt",
+		},
+		{
+			name: "sanitize_and_transform_combined",
+			mode: mockMode{transform: func(s string) string {
+				return strings.ReplaceAll(s, " ", "_")
+			}},
+			sanitize: func(s string) string {
+				s = strings.ReplaceAll(s, "(", "")
+				s = strings.ReplaceAll(s, ")", "")
+				return s
+			},
+			input:    "/path/new file name (1) - Copy (1).txt",
+			expected: "/path/new_file_name_1_-_Copy_1.txt",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := &mockAdapter{caseSensitive: true}
+			adapter := &mockAdapter{caseSensitive: true, sanitize: tt.sanitize}
 			engine := NewEngine(tt.mode, adapter)
 
 			result := engine.computeNewPathPerSelectedMode(tt.input)
