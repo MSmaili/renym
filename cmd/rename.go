@@ -132,11 +132,11 @@ func runRename(cmd *cobra.Command, args []string) error {
 		command := strings.Join(os.Args, " ")
 
 		err = history.Save(cfg.Path, history.Entry{
-			Path:      cfg.Path,
-			Timestamp: time.Now(),
-			Command:   command,
-			Version:   version.Version,
-			// Config: ,
+			Path:       cfg.Path,
+			Timestamp:  time.Now(),
+			Command:    command,
+			Version:    version.Version,
+			Config:     cfg,
 			Operations: mapEngineOperationToHistory(planResult.Operations),
 			Skipped:    mapEngineSkippedFilesToHistory(planResult.Skipped),
 			Collisions: mapEngineCollosionToHistory(planResult.Collisions),

@@ -9,10 +9,10 @@ type Entry struct {
 	Path    string `json:"path"`
 	Command string `json:"command"`
 
-	Config     map[string]any `json:"config"`
-	Operations []Operation    `json:"operations"`
-	Skipped    []Skipped      `json:"skipped"`
-	Collisions []Collision    `json:"collisions"`
+	Config     any         `json:"config"`
+	Operations []Operation `json:"operations"`
+	Skipped    []Skipped   `json:"skipped"`
+	Collisions []Collision `json:"collisions"`
 }
 
 type Operation struct {
