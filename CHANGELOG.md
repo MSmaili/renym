@@ -4,12 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.0.3] - 2025-12-07
+
 ### Added
 
 - Version command to display the current version
+  -- We added also a flag for version, -V and --version
 - Undo command that reads history and reverts rename operations
 - History tracking for rename operations
 - Support for renaming a single file
+- Small readme refactoring for installation guide
 
 ### Fixed
 
