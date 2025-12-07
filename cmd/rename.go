@@ -60,7 +60,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be renamed without actually renaming")
 
 	// Backup
-	rootCmd.Flags().BoolVarP(&dryRun, "skip-history", "", false, "Skip adding a json file for operation history which can be used for undo")
+	rootCmd.Flags().BoolVarP(&skipHistory, "skip-history", "", false, "Skip adding a json file for operation history which can be used for undo")
 
 	// Modes  flags
 	rootCmd.Flags().StringVarP(&mode, "mode", "m", "", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
