@@ -1,29 +1,51 @@
-# rnm — Fast, Safe, Cross-Platform File Rename Tool
+# rnm
 
-**rnm** is a high-performance, extensible, cross-platform command-line tool for batch renaming files and directories.
-It provides a clean architecture, safe rename planning, and a powerful rename _expression language_ that supports metadata, counters, formatting functions, and optional regex captures.
+A fast, safe, cross-platform file rename tool.
 
-## Why this tool?
+## Install
 
-This tool mainly is created for my brother. He needed a tool to rename, and silly me said it is easy to create, so here we are.
+### Go
 
----
-
-## Features
-
-TODO: for me
-
-the desired config flags:
-
-```go
-type Config struct {
-	Path            string // location where to rename by default current "."
-	Mode            string // how do we want to rename? pascal? snake_case?
-	Recursive       bool // recursivly map through directiroes and files
-	Files           bool // enable/disable file search
-	Directories     bool // enable/disable directory search
-	Ignore          []string // way to ignore some files/directories via global pattern
-	NoDefaultIgnore bool // we should add deafult ignore patterns for saffety, TODO: probably check some other libs, what makes sense as deafult. currently .git
-	DryRun          bool // good thing to not run/exectue command just console.log
-}
+```bash
+go install github.com/MSmaili/rnm@latest
 ```
+
+### Binary
+
+Download from [Releases](https://github.com/MSmaili/rnm/releases)
+
+## Quick Start
+
+```bash
+# Convert filenames to snake_case
+rnm -m snake -p ./photos
+
+# Preview changes first (dry-run)
+rnm -m kebab -p ./documents --dry-run
+
+# Rename recursively
+rnm -m pascal -p ./src -r
+
+# Undo last rename
+rnm undo
+```
+
+## Modes
+
+| Mode     | Example     |
+| -------- | ----------- |
+| `upper`  | `FILENAME`  |
+| `lower`  | `filename`  |
+| `pascal` | `FileName`  |
+| `camel`  | `fileName`  |
+| `snake`  | `file_name` |
+| `kebab`  | `file-name` |
+| `title`  | `File Name` |
+
+## Documentation
+
+Full documentation available at TODO: add /docs and should be avaiable via https://docsify.js.org/
+
+## License
+
+MIT
