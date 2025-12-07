@@ -5,11 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/MSmaili/rnm/internal/cli"
 	"github.com/MSmaili/rnm/internal/common"
 	"github.com/MSmaili/rnm/internal/engine"
 	"github.com/MSmaili/rnm/internal/fs"
+	"github.com/MSmaili/rnm/internal/history"
+	"github.com/MSmaili/rnm/internal/version"
 	"github.com/MSmaili/rnm/internal/walker"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +26,7 @@ var (
 	ignore          []string
 	noDefaultIgnore bool
 	dryRun          bool
+	skipHistory     bool
 )
 
 type Config struct {
@@ -34,6 +38,7 @@ type Config struct {
 	Ignore          []string
 	NoDefaultIgnore bool
 	DryRun          bool
+	SkipHistory     bool
 }
 
 func init() {
@@ -53,6 +58,9 @@ func init() {
 
 	// Output flags
 	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be renamed without actually renaming")
+
+	// Backup
+	rootCmd.Flags().BoolVarP(&dryRun, "skip-history", "", false, "Skip adding a json file for operation history which can be used for undo")
 
 	// Modes  flags
 	rootCmd.Flags().StringVarP(&mode, "mode", "m", "", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
@@ -91,6 +99,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 		Files:           !dirsOnly,
 		Ignore:          ignore,
 		NoDefaultIgnore: noDefaultIgnore,
+		SkipHistory:     skipHistory,
 		DryRun:          dryRun,
 	}
 
@@ -118,6 +127,25 @@ func runRename(cmd *cobra.Command, args []string) error {
 	}
 
 	planResult := engine.Plan(pathsToRename)
+
+	if !cfg.SkipHistory {
+		command := strings.Join(os.Args, " ")
+
+		err = history.Save(cfg.Path, history.Entry{
+			Path:      cfg.Path,
+			Timestamp: time.Now(),
+			Command:   command,
+			Version:   version.Version,
+			// Config: ,
+			Operations: mapEngineOperationToHistory(planResult.Operations),
+			Skipped:    mapEngineSkippedFilesToHistory(planResult.Skipped),
+			Collisions: mapEngineCollosionToHistory(planResult.Collisions),
+		})
+
+		if err != nil {
+			return fmt.Errorf("we could not save history, you can use skip-history")
+		}
+	}
 
 	if len(planResult.Operations) == 0 {
 		fmt.Println("\n✓ No files to rename")
@@ -179,6 +207,34 @@ func mapEngineToFS(ops []engine.RenameOp) []fs.RenameOp {
 		return fs.RenameOp{
 			OldPath: e.OldPath,
 			NewPath: e.NewPath,
+		}
+	})
+}
+
+func mapEngineOperationToHistory(ops []engine.RenameOp) []history.Operation {
+	return common.MapSlice(ops, func(e engine.RenameOp) history.Operation {
+		return history.Operation{
+			Old: e.OldPath,
+			New: e.NewPath,
+		}
+	})
+}
+
+func mapEngineSkippedFilesToHistory(ops []engine.SkippedFile) []history.Skipped {
+	return common.MapSlice(ops, func(e engine.SkippedFile) history.Skipped {
+		return history.Skipped{
+			Path:   e.Path,
+			Reason: e.Reason,
+		}
+	})
+}
+
+func mapEngineCollosionToHistory(ops []engine.Collision) []history.Collision {
+	return common.MapSlice(ops, func(e engine.Collision) history.Collision {
+		return history.Collision{
+			Source1: e.Source1,
+			Source2: e.Source2,
+			Target:  e.Target,
 		}
 	})
 }
