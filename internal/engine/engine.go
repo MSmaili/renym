@@ -114,8 +114,9 @@ func (e *Engine) computeNewPathPerSelectedMode(path string) string {
 	ext := filepath.Ext(oldName)
 	nameWithoutExt := strings.TrimSuffix(oldName, ext)
 
-	transformedName := e.mode.Transform(nameWithoutExt)
-	transformedName = e.adapter.SanitizeName(transformedName)
+	transformedName := e.adapter.SanitizeName(nameWithoutExt)
+	transformedName = e.mode.Transform(transformedName)
+
 	newName := transformedName + ext
 
 	return filepath.Join(dir, newName)

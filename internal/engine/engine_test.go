@@ -480,6 +480,8 @@ func TestSortPathsByDepth(t *testing.T) {
 	}
 }
 
+// TODO: needs fix and adjustements, curently ordering is done inside command... which might be wrong thing
+// because we are losing a sort testing
 func TestPlanWithDirectoryOrdering(t *testing.T) {
 	tempDir := t.TempDir()
 
