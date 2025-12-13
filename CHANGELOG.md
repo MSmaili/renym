@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.0.4] - 2025-12-08
+
+### Added
+
+- Added dry-run for undo feature
+
+### Fixed
+
+- Fix the undo command, where we were undo-ing files recursivly
+- Add .rnm-history into the ignore paths
+
 ## [v0.0.3] - 2025-12-07
 
 ### Added
@@ -67,6 +78,8 @@ All notable changes to this project will be documented in this file.
 - Main directory path issues
 - Missing GoReleaser configuration
 
-[Unreleased]: https://github.com/MSmaili/rnm/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/MSmaili/rnm/compare/v0.0.4...HEAD
+[v0.0.4]: https://github.com/MSmaili/rnm/compare/v0.0.3...v0.0.4
+[v0.0.3]: https://github.com/MSmaili/rnm/compare/v0.0.2...v0.0.3
 [v0.0.2]: https://github.com/MSmaili/rnm/compare/v0.0.1...v0.0.2
 [v0.0.1]: https://github.com/MSmaili/rnm/releases/tag/v0.0.1
