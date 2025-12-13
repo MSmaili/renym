@@ -60,6 +60,48 @@ func TestPlan(t *testing.T) {
 			expectedCollCount: 0,
 		},
 		{
+			name:          "rename same file name different extension recursivly",
+			mode:          mockMode{transform: func(s string) string { return strings.ToUpper(s) }},
+			caseSensitive: true,
+			inputPaths: []string{
+				filepath.Join(tempDir, "/test/fooBar.md"),
+				filepath.Join(tempDir, "/test2/fooBar.md"),
+			},
+			expectedOps: []RenameOp{
+				{
+					OldPath: filepath.Join(tempDir, "/test/fooBar.md"),
+					NewPath: filepath.Join(tempDir, "/test/FOOBAR.md"),
+				},
+				{
+					OldPath: filepath.Join(tempDir, "/test2/fooBar.md"),
+					NewPath: filepath.Join(tempDir, "/test2/FOOBAR.md"),
+				},
+			},
+			expectedSkipped:   []SkippedFile{},
+			expectedCollCount: 0,
+		},
+		{
+			name:          "rename same file name different extension",
+			mode:          mockMode{transform: func(s string) string { return strings.ToUpper(s) }},
+			caseSensitive: true,
+			inputPaths: []string{
+				filepath.Join(tempDir, "fooBar.md"),
+				filepath.Join(tempDir, "fooBar.txt"),
+			},
+			expectedOps: []RenameOp{
+				{
+					OldPath: filepath.Join(tempDir, "fooBar.md"),
+					NewPath: filepath.Join(tempDir, "FOOBAR.md"),
+				},
+				{
+					OldPath: filepath.Join(tempDir, "fooBar.txt"),
+					NewPath: filepath.Join(tempDir, "FOOBAR.txt"),
+				},
+			},
+			expectedSkipped:   []SkippedFile{},
+			expectedCollCount: 0,
+		},
+		{
 			name:          "simple_rename",
 			mode:          mockMode{transform: func(s string) string { return "bar" }},
 			caseSensitive: true,
