@@ -28,9 +28,12 @@ With a history file path, undoes that specific operation.`,
 
 func init() {
 	rootCmd.AddCommand(undoCmd)
+	undoCmd.Flags().BoolP("dry-run", "n", false, "Show what would be renamed without actually renaming")
+
 }
 
 func runUndo(cmd *cobra.Command, args []string) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	maybePath := ""
 	if len(args) > 0 {
@@ -42,7 +45,7 @@ func runUndo(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	err = fs.Apply(mapHistoryInReverseToFs(entry), false)
+	err = fs.Apply(mapHistoryInReverseToFs(entry), dryRun)
 	if err != nil {
 		return fmt.Errorf("rename operation failed: %w", err)
 	}
@@ -51,6 +54,10 @@ func runUndo(cmd *cobra.Command, args []string) error {
 	fmt.Println("  ✓ UNDO COMPLETED SUCCESSFULLY")
 	fmt.Println(strings.Repeat("=", 60))
 
+	if dryRun {
+		fmt.Println("We would have removed entry from history")
+		return nil
+	}
 	err = history.Delete(maybePath)
 	if err != nil {
 		return err
