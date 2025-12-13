@@ -293,11 +293,12 @@ func TestCleanup(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	tests := []struct {
-		name        string
-		setupFiles  map[string]string
-		loadPath    string
-		wantVersion string
-		wantError   bool
+		name         string
+		setupFiles   map[string]string
+		loadPath     string
+		wantVersion  string
+		wantError    bool
+		wantOpsOrder []string // expected order of Operation.Old paths (if non-empty)
 	}{
 		{
 			name: "load specific file",
@@ -332,6 +333,21 @@ func TestLoad(t *testing.T) {
 			loadPath:  filepath.Join(historyDir, "2024-01-15_103000.json"),
 			wantError: true,
 		},
+		{
+			name: "load sorts operations by depth",
+			setupFiles: map[string]string{
+				"2024-01-15_103000.json": `{"version":"1.0","timestamp":"2024-01-15T10:30:00Z","path":"/test","command":"rename","operations":[
+					{"old":"a/b/c/deep.txt","new":"a/b/c/deep_new.txt"},
+					{"old":"a/mid.txt","new":"a/mid_new.txt"},
+					{"old":"top.txt","new":"top_new.txt"},
+					{"old":"a/b/nested.txt","new":"a/b/nested_new.txt"}
+				]}`,
+			},
+			loadPath:     filepath.Join(historyDir, "2024-01-15_103000.json"),
+			wantVersion:  "1.0",
+			wantError:    false,
+			wantOpsOrder: []string{"top.txt", "a/mid.txt", "a/b/nested.txt", "a/b/c/deep.txt"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -356,6 +372,13 @@ func TestLoad(t *testing.T) {
 				assert.Nil(t, err)
 				assert.NotNil(t, entry)
 				assert.Equal(t, entry.Version, tt.wantVersion)
+
+				if len(tt.wantOpsOrder) > 0 {
+					assert.Equal(t, len(entry.Operations), len(tt.wantOpsOrder))
+					for i, wantOld := range tt.wantOpsOrder {
+						assert.Equal(t, entry.Operations[i].Old, wantOld)
+					}
+				}
 			}
 		})
 	}

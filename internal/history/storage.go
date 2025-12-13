@@ -108,7 +108,33 @@ func Load(path string) (*Entry, error) {
 		return nil, fmt.Errorf("error parsing file %w", err)
 	}
 
+	sortOperationsByDepth(entry.Operations)
+
 	return &entry, nil
+}
+
+// sortOperationsByDepth sorts operations by path depth (top-level first, deeper paths later).
+func sortOperationsByDepth(ops []Operation) {
+	type opWithDepth struct {
+		op    Operation
+		depth int
+	}
+
+	items := make([]opWithDepth, len(ops))
+	for i := range ops {
+		items[i] = opWithDepth{
+			op:    ops[i],
+			depth: strings.Count(ops[i].Old, string(filepath.Separator)),
+		}
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].depth < items[j].depth
+	})
+
+	for i := range items {
+		ops[i] = items[i].op
+	}
 }
 
 func Delete(path string) error {
