@@ -41,6 +41,7 @@ func Walk(cfg Config) ([]string, error) {
 	if !cfg.NoDefaultIgnore {
 		ignorePatterns = append(DefaultIgnorePatterns, cfg.Ignore...)
 	}
+	ignorePatterns = append(ignorePatterns, ".rnm-history")
 
 	err = filepath.WalkDir(cfg.Path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

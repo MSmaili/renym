@@ -39,6 +39,46 @@ func TestWalk(t *testing.T) {
 			want: []string{"sub/file2.txt", "file1.txt"},
 		},
 		{
+			name: "ignore files in .rnm-history directory",
+			files: []string{
+				".rnm-history/a.go",
+				".rnm-history/a.txt",
+			},
+			cfg: Config{
+				Files:       true,
+				Recursive:   true,
+				Directories: true,
+			},
+			want: []string{},
+		},
+		{
+			name: "ignore files in .rnm-history directory also internatly",
+			files: []string{
+				".rnm-history/a.go",
+				"test/.rnm-history/test.go",
+				"test/works.go",
+				"works.go",
+				".rnm-history/a.txt",
+			},
+			cfg: Config{
+				Files:       true,
+				Directories: true,
+				Recursive:   true,
+			},
+			want: []string{"works.go", "test/works.go", "test"},
+		},
+		{
+			name: "do not ignore same file name with different ext",
+			files: []string{
+				"a.go",
+				"a.txt",
+			},
+			cfg: Config{
+				Files: true,
+			},
+			want: []string{"a.go", "a.txt"},
+		},
+		{
 			name: "ignore patterns skip files",
 			files: []string{
 				"a.go",
