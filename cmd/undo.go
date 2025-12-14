@@ -12,7 +12,7 @@ import (
 )
 
 var undoCmd = &cobra.Command{
-	Use:   "undo [history-file]",
+	Use:   "undo",
 	Short: "Undo rename operations",
 	Long:  `Undo rename operations from history.`,
 	RunE:  runUndo,
