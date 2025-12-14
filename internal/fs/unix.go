@@ -4,10 +4,12 @@ package fs
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 )
 
 type UnixFSAdapter struct {
@@ -53,4 +55,13 @@ func detectCaseSensitivity() bool {
 	lowerFile := filepath.Join(tmpDir, "rnm_case_test_upper.tmp")
 	_, err := os.Stat(lowerFile)
 	return err != nil // if Stat fails → case sensitive
+}
+
+func (a *UnixFSAdapter) PathIdentifier(path string) (string, error) {
+	var stat syscall.Stat_t
+	if err := syscall.Stat(path, &stat); err != nil {
+		return "", fmt.Errorf("failed to stat path %s: %w", path, err)
+	}
+
+	return fmt.Sprintf("%d:%d", stat.Dev, stat.Ino), nil
 }

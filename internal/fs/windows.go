@@ -1,8 +1,14 @@
+//go:build windows
+
 package fs
 
 import (
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
+
+	"golang.org/x/sys/windows"
 )
 
 type WindowsFSAdapter struct{}
@@ -72,4 +78,24 @@ func (a WindowsFSAdapter) SanitizeName(name string) string {
 
 func (a WindowsFSAdapter) IsCaseSensitive() bool {
 	return false
+}
+
+func (a WindowsFSAdapter) PathIdentifier(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := windows.Handle(f.Fd())
+
+	var info windows.ByHandleFileInformation
+	if err := windows.GetFileInformationByHandle(h, &info); err != nil {
+		return "", err
+	}
+
+	fileIndex := (uint64(info.FileIndexHigh) << 32) | uint64(info.FileIndexLow)
+	volume := info.VolumeSerialNumber
+
+	return fmt.Sprintf("%d:%d", volume, fileIndex), nil
 }

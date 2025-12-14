@@ -9,6 +9,7 @@ type FileSystemAdapter interface {
 	IsValidName(name string) bool
 	SanitizeName(name string) string
 	IsCaseSensitive() bool
+	PathIdentifier(path string) (string, error)
 }
 
 type RenameOp struct {
