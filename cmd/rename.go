@@ -12,6 +12,7 @@ import (
 	"github.com/MSmaili/rnm/internal/engine"
 	"github.com/MSmaili/rnm/internal/fs"
 	"github.com/MSmaili/rnm/internal/history"
+	"github.com/MSmaili/rnm/internal/log"
 	"github.com/MSmaili/rnm/internal/version"
 	"github.com/MSmaili/rnm/internal/walker"
 	"github.com/spf13/cobra"
@@ -76,9 +77,9 @@ func init() {
 		msg := err.Error()
 
 		if strings.Contains(msg, "flag needs an argument") && (strings.HasSuffix(msg, "-m") || strings.HasSuffix(msg, "--mode")) {
-			fmt.Println("❗ The --mode flag requires a value.")
-			fmt.Println("Available modes: upper, lower, pascal, camel, snake, kebab, title")
-			fmt.Println("\nRun rnm --help for more info")
+			log.Error("The --mode flag requires a value.\n")
+			log.Error("Available modes: upper, lower, pascal, camel, snake, kebab, title\n")
+			log.Error("\nRun rnm --help for more info\n")
 			os.Exit(1)
 		}
 
@@ -88,7 +89,7 @@ func init() {
 
 func validateFlags(cmd *cobra.Command, args []string) error {
 	if showVersion {
-		fmt.Printf("rnm version %s\n", version.Version)
+		log.Print("rnm version %s\n", version.Version)
 		os.Exit(0)
 	}
 	if !cmd.Flags().Changed("mode") {
@@ -139,7 +140,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 	if !cfg.SkipHistory {
 		store, err := history.NewGlobalStore(adapter)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: history disabled: %v\n", err)
+			log.Warn("history disabled: %v\n", err)
 		} else {
 			command := strings.Join(os.Args, " ")
 
@@ -154,17 +155,17 @@ func runRename(cmd *cobra.Command, args []string) error {
 			})
 
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: could not save history: %v\n", err)
+				log.Warn("could not save history: %v\n", err)
 			}
 		}
 	}
 
 	if len(planResult.Operations) == 0 {
-		fmt.Println("\n✓ No files to rename")
+		log.Info("\n✓ No files to rename\n")
 		return nil
 	}
 
-	fmt.Printf("\nProcessing %d file(s)...\n", len(planResult.Operations))
+	log.Debug("Processing %d file(s)...\n", len(planResult.Operations))
 
 	err = fs.Apply(mapEngineToFS(planResult.Operations), cfg.DryRun)
 	if err != nil {
@@ -177,41 +178,44 @@ func runRename(cmd *cobra.Command, args []string) error {
 }
 
 func printResults(result engine.PlanResult, dryRun bool) {
+	separator := strings.Repeat("=", 60)
+	thinSeparator := strings.Repeat("-", 60)
+
 	// Success header
-	fmt.Println("\n" + strings.Repeat("=", 60))
+	log.Info("\n%s\n", separator)
 	if dryRun {
-		fmt.Println("  DRY RUN - No files were actually renamed")
+		log.Info("  DRY RUN - No files were actually renamed\n")
 	} else {
-		fmt.Println("  ✓ COMPLETED SUCCESSFULLY")
-		fmt.Println(strings.Repeat("=", 60))
-		fmt.Printf("  Files renamed:   %d\n", len(result.Operations))
+		log.Info("  ✓ COMPLETED SUCCESSFULLY\n")
+		log.Info("%s\n", separator)
+		log.Info("  Files renamed:   %d\n", len(result.Operations))
 	}
 
 	// Show warnings if any
 	if len(result.Skipped) > 0 {
-		fmt.Printf("  Files skipped:   %d\n", len(result.Skipped))
+		log.Info("  Files skipped:   %d\n", len(result.Skipped))
 	}
 	if len(result.Collisions) > 0 {
-		fmt.Printf("  Collisions:      %d\n", len(result.Collisions))
+		log.Info("  Collisions:      %d\n", len(result.Collisions))
 	}
-	fmt.Println(strings.Repeat("=", 60))
+	log.Info("%s\n", separator)
 
 	// Show collision details
 	if len(result.Collisions) > 0 {
-		fmt.Println("\n⚠ COLLISIONS:")
-		fmt.Println(strings.Repeat("-", 60))
+		log.Info("\n⚠ COLLISIONS:\n")
+		log.Info("%s\n", thinSeparator)
 		for i, collision := range result.Collisions {
-			fmt.Printf("  %d. Multiple files trying to rename to:\n", i+1)
-			fmt.Printf("     → %s\n", filepath.Base(collision.Target))
-			fmt.Printf("     Sources: %s, %s\n", filepath.Base(collision.Source1), filepath.Base(collision.Source2))
+			log.Info("  %d. Multiple files trying to rename to:\n", i+1)
+			log.Info("     → %s\n", filepath.Base(collision.Target))
+			log.Info("     Sources: %s, %s\n", filepath.Base(collision.Source1), filepath.Base(collision.Source2))
 			if i < len(result.Collisions)-1 {
-				fmt.Println()
+				log.Info("\n")
 			}
 		}
-		fmt.Println(strings.Repeat("-", 60))
+		log.Info("%s\n", thinSeparator)
 	}
 
-	fmt.Println()
+	log.Info("\n")
 }
 
 func mapEngineToFS(ops []engine.RenameOp) []fs.RenameOp {

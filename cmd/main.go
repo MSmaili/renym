@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/MSmaili/rnm/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +30,7 @@ Modes:
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Error("%v\n", err)
 		os.Exit(1)
 	}
 }

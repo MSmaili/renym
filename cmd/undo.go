@@ -7,6 +7,7 @@ import (
 	"github.com/MSmaili/rnm/internal/common"
 	"github.com/MSmaili/rnm/internal/fs"
 	"github.com/MSmaili/rnm/internal/history"
+	"github.com/MSmaili/rnm/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -46,12 +47,13 @@ func runUndo(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("rename operation failed: %w", err)
 	}
 
-	fmt.Println(strings.Repeat("=", 60))
-	fmt.Println("  ✓ UNDO COMPLETED SUCCESSFULLY")
-	fmt.Println(strings.Repeat("=", 60))
+	separator := strings.Repeat("=", 60)
+	log.Info("%s\n", separator)
+	log.Info("  ✓ UNDO COMPLETED SUCCESSFULLY\n")
+	log.Info("%s\n", separator)
 
 	if dryRun {
-		fmt.Println("We would have removed entry from history")
+		log.Info("We would have removed entry from history\n")
 		return nil
 	}
 
@@ -59,7 +61,7 @@ func runUndo(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("We removed the entry from history")
+	log.Info("We removed the entry from history\n")
 
 	return nil
 }
