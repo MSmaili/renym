@@ -3,15 +3,217 @@ package history
 import (
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 )
 
-const historyDir = ".rnm-history"
-const limitNumberOfHistoryFiles = 5
+const (
+	historySubDir    = "history"
+	maxEntriesPerDir = 2
+)
+
+type GlobalStore struct {
+	configDir string
+	pathID    PathIdentifier
+}
+
+func NewGlobalStore(pathID PathIdentifier) (*GlobalStore, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config dir: %w", err)
+	}
+
+	rnmConfigDir := filepath.Join(configDir, "rnm")
+
+	return &GlobalStore{
+		configDir: rnmConfigDir,
+		pathID:    pathID,
+	}, nil
+}
+
+func sanitizeDirID(dirID string) string {
+	return strings.ReplaceAll(dirID, ":", "_")
+}
+
+// dirHistoryPath returns the path to a directory's history folder
+func (s *GlobalStore) dirHistoryPath(dirID string) string {
+	return filepath.Join(s.configDir, historySubDir, sanitizeDirID(dirID))
+}
+
+func (s *GlobalStore) Save(dirPath string, entry Entry) (string, error) {
+	dirID, err := s.resolveDirID(dirPath)
+	if err != nil {
+		return "", err
+	}
+
+	absPath, _ := resolveAbsolutePath(dirPath)
+
+	entry.Path = absPath
+	entry.DirID = dirID
+
+	histDir := s.dirHistoryPath(dirID)
+	if err := os.MkdirAll(histDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create history dir: %w", err)
+	}
+
+	fileName := entry.Timestamp.Format("2006-01-02_150405") + ".json"
+	filePath := filepath.Join(histDir, fileName)
+
+	data, err := json.MarshalIndent(entry, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal entry: %w", err)
+	}
+
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return "", fmt.Errorf("failed to write history: %w", err)
+	}
+
+	if err := s.cleanup(histDir); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: cleanup failed: %v\n", err)
+	}
+
+	return fileName, nil
+}
+
+func (s *GlobalStore) Latest(dirPath string) (*Entry, error) {
+	dirID, err := s.resolveDirID(dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	histDir := s.dirHistoryPath(dirID)
+
+	latest, err := s.latestFile(histDir)
+	if err != nil {
+		return nil, err
+	}
+	filePath := filepath.Join(histDir, latest)
+
+	return s.loadEntry(filePath)
+}
+
+func (s *GlobalStore) loadEntry(path string) (*Entry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read history: %w", err)
+	}
+
+	var entry Entry
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return nil, fmt.Errorf("failed to parse history: %w", err)
+	}
+
+	sortOperationsByDepth(entry.Operations)
+	return &entry, nil
+}
+
+func (s *GlobalStore) latestFile(histDir string) (string, error) {
+	entries, err := os.ReadDir(histDir)
+	if err != nil {
+		return "", fmt.Errorf("there is smthg wrong on reading the file", err)
+	}
+
+	var latest string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+
+		name := e.Name()
+		if !strings.HasSuffix(name, ".json") {
+			continue
+		}
+
+		if latest == "" || name > latest {
+			latest = name
+		}
+	}
+
+	if latest == "" {
+		return "", fmt.Errorf("No history found for directory")
+	}
+
+	return latest, nil
+}
+
+func (s *GlobalStore) Delete(dirPath string) error {
+	dirID, err := s.resolveDirID(dirPath)
+	if err != nil {
+		return err
+	}
+
+	histDir := s.dirHistoryPath(dirID)
+
+	latest, err := s.latestFile(histDir)
+	if err != nil {
+		return err
+	}
+	filePath := filepath.Join(histDir, latest)
+
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete history file: %w", err)
+	}
+
+	return nil
+}
+
+func (s *GlobalStore) cleanup(histDir string) error {
+	entries, err := os.ReadDir(histDir)
+	if err != nil {
+		return err
+	}
+
+	var jsonFiles []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+			jsonFiles = append(jsonFiles, e.Name())
+		}
+	}
+
+	if len(jsonFiles) <= maxEntriesPerDir {
+		return nil
+	}
+
+	sort.Strings(jsonFiles)
+
+	toRemove := len(jsonFiles) - maxEntriesPerDir
+	for i := range toRemove {
+		os.Remove(filepath.Join(histDir, jsonFiles[i]))
+	}
+
+	return nil
+}
+
+func resolveAbsolutePath(dirPath string) (string, error) {
+
+	absPath, err := filepath.Abs(dirPath)
+	if err != nil {
+		return "", err
+	}
+
+	absPath, err = resolveDir(absPath)
+	if err != nil {
+		return "", err
+	}
+
+	return absPath, nil
+}
+
+func (s *GlobalStore) resolveDirID(dirPath string) (string, error) {
+	absPath, err := resolveAbsolutePath(dirPath)
+	if err != nil {
+		return "", err
+	}
+
+	dirID, err := s.pathID.PathIdentifier(absPath)
+	if err != nil {
+		return "", err
+	}
+
+	return dirID, nil
+}
 
 func resolveDir(path string) (string, error) {
 	info, err := os.Stat(path)
@@ -22,95 +224,6 @@ func resolveDir(path string) (string, error) {
 		return filepath.Dir(path), nil
 	}
 	return path, nil
-}
-
-func Save(basePath string, e Entry) error {
-	basePath, err := resolveDir(basePath)
-	if err != nil {
-		return fmt.Errorf("failed to resolve directory: %w", err)
-	}
-
-	dir := filepath.Join(basePath, historyDir)
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create history directory: %w", err)
-	}
-
-	fileName := e.Timestamp.Format("2006-01-02_150405") + ".json"
-	path := filepath.Join(dir, fileName)
-
-	data, err := json.MarshalIndent(e, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal history: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		return fmt.Errorf("failed to write history file: %w", err)
-	}
-
-	return Cleanup(limitNumberOfHistoryFiles)
-}
-
-func List() ([]string, error) {
-	pattern := filepath.Join(historyDir, "*.json")
-	files, err := filepath.Glob(pattern)
-	if err != nil {
-		return nil, err
-	}
-
-	var historyFiles []string
-	historyFiles = append(historyFiles, files...)
-
-	sort.Slice(historyFiles, func(i, j int) bool {
-		return historyFiles[i] > historyFiles[j]
-	})
-
-	return historyFiles, nil
-}
-
-func Cleanup(keepLast int) error {
-	files, err := List()
-	if err != nil {
-		return err
-	}
-
-	if len(files) <= keepLast {
-		return nil
-	}
-
-	for i := keepLast; i < len(files); i++ {
-		if err := os.Remove(files[i]); err != nil {
-			return fmt.Errorf("failed to remove %s: %w", files[i], err)
-		}
-	}
-
-	return nil
-}
-
-func Load(path string) (*Entry, error) {
-
-	if path == "" {
-		latestFileName, err := latest(historyDir)
-		if err != nil {
-			return nil, err
-		}
-		path = filepath.Join(historyDir, latestFileName)
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading file %w", err)
-	}
-
-	var entry Entry
-	err = json.Unmarshal(data, &entry)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing file %w", err)
-	}
-
-	sortOperationsByDepth(entry.Operations)
-
-	return &entry, nil
 }
 
 // sortOperationsByDepth sorts operations by path depth (top-level first, deeper paths later).
@@ -135,46 +248,4 @@ func sortOperationsByDepth(ops []Operation) {
 	for i := range items {
 		ops[i] = items[i].op
 	}
-}
-
-func Delete(path string) error {
-
-	if path == "" {
-		latestFileName, err := latest(historyDir)
-		if err != nil {
-			return err
-		}
-		path = filepath.Join(historyDir, latestFileName)
-	}
-
-	if err := os.Remove(path); err != nil {
-		return fmt.Errorf("failed to remove %s: %w", path, err)
-	}
-
-	return nil
-}
-
-func latest(dir string) (string, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return "", fmt.Errorf("reading file, for this directory \"%s\",  %w", dir, err)
-	}
-
-	var files []fs.DirEntry
-	for _, f := range entries {
-		if !f.IsDir() && strings.HasSuffix(f.Name(), ".json") {
-			files = append(files, f)
-		}
-	}
-
-	if len(files) == 0 {
-		return "", fmt.Errorf("no history found")
-	}
-
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
-	})
-
-	latest := files[len(files)-1]
-	return latest.Name(), nil
 }

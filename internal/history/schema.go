@@ -6,7 +6,9 @@ type Entry struct {
 	Version   string    `json:"version"`
 	Timestamp time.Time `json:"timestamp"`
 
-	Path    string `json:"path"`
+	Path  string `json:"path"`
+	DirID string `json:"dir_id"`
+
 	Command string `json:"command"`
 
 	Config     any         `json:"config"`

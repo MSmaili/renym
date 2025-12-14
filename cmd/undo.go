@@ -13,34 +13,30 @@ import (
 var undoCmd = &cobra.Command{
 	Use:   "undo [history-file]",
 	Short: "Undo rename operations",
-	Long: `Undo rename operations from history.
-
-Without arguments, undoes the most recent operation.
-With a history file path, undoes that specific operation.`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: runUndo,
-	Example: `  # Undo most recent operation
+	Long:  `Undo rename operations from history.`,
+	RunE:  runUndo,
+	Example: `  # Undo most recent operation in current directory
   rnm undo
-
-  # Undo specific operation
-  rnm undo .rnm_history/2025-11-25_230427.json`,
+  `,
 }
 
 func init() {
 	rootCmd.AddCommand(undoCmd)
-	undoCmd.Flags().BoolP("dry-run", "n", false, "Show what would be renamed without actually renaming")
-
+	undoCmd.Flags().BoolP("dry-run", "n", false, "Show what would be undone without actually undoing")
 }
 
 func runUndo(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-	maybePath := ""
-	if len(args) > 0 {
-		maybePath = args[0]
+	adapter := fs.NewAdapter()
+	store, err := history.NewGlobalStore(adapter)
+	if err != nil {
+		return fmt.Errorf("failed to initialize history store: %w", err)
 	}
 
-	entry, err := history.Load(maybePath)
+	dirPath := "."
+
+	entry, err := store.Latest(dirPath)
 	if err != nil {
 		return err
 	}
@@ -58,7 +54,8 @@ func runUndo(cmd *cobra.Command, args []string) error {
 		fmt.Println("We would have removed entry from history")
 		return nil
 	}
-	err = history.Delete(maybePath)
+
+	err = store.Delete(dirPath)
 	if err != nil {
 		return err
 	}

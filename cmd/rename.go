@@ -137,21 +137,25 @@ func runRename(cmd *cobra.Command, args []string) error {
 	planResult := engine.Plan(pathsToRename)
 
 	if !cfg.SkipHistory {
-		command := strings.Join(os.Args, " ")
-
-		err = history.Save(cfg.Path, history.Entry{
-			Path:       cfg.Path,
-			Timestamp:  time.Now(),
-			Command:    command,
-			Version:    version.Version,
-			Config:     cfg,
-			Operations: mapEngineOperationToHistory(planResult.Operations),
-			Skipped:    mapEngineSkippedFilesToHistory(planResult.Skipped),
-			Collisions: mapEngineCollosionToHistory(planResult.Collisions),
-		})
-
+		store, err := history.NewGlobalStore(adapter)
 		if err != nil {
-			return fmt.Errorf("we could not save history, you can use skip-history")
+			fmt.Fprintf(os.Stderr, "Warning: history disabled: %v\n", err)
+		} else {
+			command := strings.Join(os.Args, " ")
+
+			_, err = store.Save(cfg.Path, history.Entry{
+				Timestamp:  time.Now(),
+				Command:    command,
+				Version:    version.Version,
+				Config:     cfg,
+				Operations: mapEngineOperationToHistory(planResult.Operations),
+				Skipped:    mapEngineSkippedFilesToHistory(planResult.Skipped),
+				Collisions: mapEngineCollosionToHistory(planResult.Collisions),
+			})
+
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not save history: %v\n", err)
+			}
 		}
 	}
 
