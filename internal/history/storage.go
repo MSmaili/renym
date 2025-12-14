@@ -112,7 +112,7 @@ func (s *GlobalStore) loadEntry(path string) (*Entry, error) {
 func (s *GlobalStore) latestFile(histDir string) (string, error) {
 	entries, err := os.ReadDir(histDir)
 	if err != nil {
-		return "", fmt.Errorf("there is smthg wrong on reading the file", err)
+		return "", fmt.Errorf("failed to read history directory: %w", err)
 	}
 
 	var latest string
