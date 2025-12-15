@@ -88,3 +88,28 @@ func TestValidateFlags(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateGlobalFlags(t *testing.T) {
+	tests := []struct {
+		name      string
+		verbose   bool
+		quiet     bool
+		expectErr bool
+	}{
+		{"neither_flag", false, false, false},
+		{"verbose_only", true, false, false},
+		{"quiet_only", false, true, false},
+		{"both_flags_conflict", true, true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateGlobalFlags(tt.verbose, tt.quiet)
+			if tt.expectErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
+		})
+	}
+}
