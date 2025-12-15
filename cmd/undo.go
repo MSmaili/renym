@@ -23,11 +23,10 @@ var undoCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(undoCmd)
-	undoCmd.Flags().BoolP("dry-run", "n", false, "Show what would be undone without actually undoing")
 }
 
 func runUndo(cmd *cobra.Command, args []string) error {
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	dryRun := globalCfg.DryRun
 
 	adapter := fs.NewAdapter()
 	store, err := history.NewGlobalStore(adapter)

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -8,6 +9,9 @@ import (
 )
 
 var ValidModes = []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "screaming"}
+
+// ErrConflictingFlags is returned when mutually exclusive flags are used together
+var ErrConflictingFlags = errors.New("conflicting flags")
 
 func ValidateMode(mode string) error {
 	if slices.Contains(ValidModes, mode) {
@@ -35,5 +39,14 @@ func ValidateFlags(mode, path string) error {
 		return err
 	}
 
+	return nil
+}
+
+// ValidateGlobalFlags validates global/persistent flags for conflicts.
+// Returns an error if mutually exclusive flags are used together.
+func ValidateGlobalFlags(verbose, quiet bool) error {
+	if verbose && quiet {
+		return fmt.Errorf("%w: --verbose and --quiet cannot be used together", ErrConflictingFlags)
+	}
 	return nil
 }

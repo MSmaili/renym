@@ -26,22 +26,9 @@ var (
 	dirsOnly        bool
 	ignore          []string
 	noDefaultIgnore bool
-	dryRun          bool
 	skipHistory     bool
 	showVersion     bool
 )
-
-type Config struct {
-	Path            string
-	Mode            string
-	Recursive       bool
-	Directories     bool
-	Files           bool
-	Ignore          []string
-	NoDefaultIgnore bool
-	DryRun          bool
-	SkipHistory     bool
-}
 
 func init() {
 	// Path flags
@@ -57,9 +44,6 @@ func init() {
 	// Filter flags
 	rootCmd.Flags().StringSliceVar(&ignore, "ignore", nil, "Glob pattern to ignore (can be specified multiple times)")
 	rootCmd.Flags().BoolVar(&noDefaultIgnore, "no-default-ignore", false, "Disable default ignore patterns (.git, .svn, .hg)")
-
-	// Output flags
-	rootCmd.Flags().BoolVarP(&dryRun, "dry-run", "n", false, "Show what would be renamed without actually renaming")
 
 	// Backup
 	rootCmd.Flags().BoolVarP(&skipHistory, "skip-history", "", false, "Skip adding a json file for operation history which can be used for undo")
@@ -100,7 +84,7 @@ func validateFlags(cmd *cobra.Command, args []string) error {
 }
 
 func runRename(cmd *cobra.Command, args []string) error {
-	cfg := Config{
+	cfg := cli.Config{
 		Path:            path,
 		Mode:            mode,
 		Recursive:       recursive,
@@ -109,7 +93,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 		Ignore:          ignore,
 		NoDefaultIgnore: noDefaultIgnore,
 		SkipHistory:     skipHistory,
-		DryRun:          dryRun,
+		DryRun:          globalCfg.DryRun,
 	}
 
 	adapter := fs.NewAdapter()
