@@ -51,10 +51,6 @@ func Walk(cfg Config) ([]string, error) {
 			return nil
 		}
 
-		if d.IsDir() && !cfg.Recursive && path != cfg.Path {
-			return fs.SkipDir
-		}
-
 		name := d.Name()
 		for _, pattern := range ignorePatterns {
 			matched, err := filepath.Match(pattern, name)
@@ -69,9 +65,14 @@ func Walk(cfg Config) ([]string, error) {
 			}
 		}
 
-		if d.IsDir() && cfg.Directories {
-			paths = append(paths, path)
-		} else if !d.IsDir() && cfg.Files {
+		if d.IsDir() {
+			if cfg.Directories {
+				paths = append(paths, path)
+			}
+			if !cfg.Recursive {
+				return fs.SkipDir
+			}
+		} else if cfg.Files {
 			paths = append(paths, path)
 		}
 

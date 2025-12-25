@@ -112,6 +112,19 @@ func TestWalk(t *testing.T) {
 			},
 			want: []string{"dir", "dir/test"},
 		},
+		{
+			name: "adds only directories non recursive",
+			files: []string{
+				".git/file1.txt",
+				"dir/test/hello.txt",
+			},
+			cfg: Config{
+				Recursive:   false,
+				Directories: true,
+				Files:       false,
+			},
+			want: []string{"dir"},
+		},
 	}
 
 	for _, tt := range tests {
