@@ -18,6 +18,7 @@ var ModeRegistry = map[string]RenameMode{
 	"kebab":     KebabCaseMode{},
 	"title":     TitleCaseMode{},
 	"screaming": ScreamingSnakeMode{},
+	"sentence":  SentenceCaseMode{},
 }
 
 type UpperCaseMode struct{}
@@ -112,6 +113,17 @@ func (s ScreamingSnakeMode) Transform(input string) string {
 		words[i] = strings.ToUpper(w)
 	}
 	return strings.Join(words, "_")
+}
+
+type SentenceCaseMode struct{}
+
+func (s SentenceCaseMode) Transform(input string) string {
+	words := splitWords(input)
+	if len(words) == 0 {
+		return ""
+	}
+	words[0] = upperFirst(words[0])
+	return strings.Join(words, " ")
 }
 
 func splitWords(s string) []string {

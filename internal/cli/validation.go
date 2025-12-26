@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var ValidModes = []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "screaming"}
+var ValidModes = []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "screaming", "sentence"}
 
 // ErrConflictingFlags is returned when mutually exclusive flags are used together
 var ErrConflictingFlags = errors.New("conflicting flags")

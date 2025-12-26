@@ -75,6 +75,9 @@ func TestModes(t *testing.T) {
 
 		{"screaming_hello_world", "screaming", "hello world", "HELLO_WORLD"},
 		{"screaming_FileID_Test123", "screaming", "FileID Test123", "FILE_ID_TEST_123"},
+
+		{"sentence case -> my-file", "sentence", "my-file", "My file"},
+		{"sentence case -> My file", "sentence", "My file", "My file"},
 	}
 
 	for _, tt := range tests {
