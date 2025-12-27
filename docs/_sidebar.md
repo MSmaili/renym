@@ -1,15 +1,6 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-17 00:53:37
-modified: 2025-12-17 00:59:06
----
 # Documentation
 
-- [Index](index.md)
-- [Installation](installation.md)
+- [Overview](readme.md)
 - [Quick Start](quick-start.md)
 - [Basic Usage](basic-usage.md)
 - [Modes](modes.md)

@@ -1,11 +1,3 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 22:23:14
-modified: 2025-12-17 00:49:04
----
 # Modes
 
 Modes define how RNM transforms file and directory names.

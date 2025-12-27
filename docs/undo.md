@@ -1,11 +1,3 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 21:21:40
-modified: 2025-12-17 00:52:23
----
 # Undo
 
 Undo reverts rename operations using locally recorded history.

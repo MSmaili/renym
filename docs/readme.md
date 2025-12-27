@@ -1,25 +1,21 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 22:26:32
-modified: 2025-12-17 01:13:19
----
 # RNM
 
-RNM is a cross-platform CLI tool for batch renaming files and directories using predefined rename modes and explicit scope control.
+RNM is a cross-platform CLI tool for batch renaming files and directories using consistent casing rules and explicit scope control. 
 
-It supports previewing changes, ignoring paths, and undo via local history.
+It supports previewing changes, ignoring paths, and undo via local history. 
+
+RNM is CLI-first. A GUI that mirrors the CLI behavior is planned. 
 
 ---
 
 ## Features
 
-- Multiple rename modes (`upper`, `lower`, `pascal`, `camel`, `snake`, `kebab`, `title`)
-- Recursive processing and directory renaming
-- Dry-run previews and undo support
-- Ignore rules with sensible defaults
+* Rename files using casing formats such as kebab-case, snake_case, Title Case, camelCase, and PascalCase. 
+* Apply rename operations recursively across directory trees. 
+* Optionally include directories or target directories only during rename operations. 
+* Preview changes using dry run before applying them. 
+* Record local history for rename operations to support undo (unless history is skipped for an operation). 
+* Ignore rules with sensible defaults. 
 
 ---
 
@@ -47,9 +43,6 @@ rnm undo
 
 ## Documentation
 
-Full documentation is available:
-
-- [Index](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/index.md)
 - [Installation](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/installation.md)
 - [Quick Start](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/quick-start.md)
 - [Basic Usage](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/basic-usage.md)
@@ -63,8 +56,7 @@ Full documentation is available:
 
 ---
 
-## Status
+## Planned
 
-RNM is CLI-first. A GUI that mirrors the CLI behavior is planned.
-
----
+* A minimalist GUI that exposes the same functionality as the CLI. 
+* Planned integration with the Windows context menu. 

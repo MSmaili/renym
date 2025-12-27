@@ -1,11 +1,3 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 21:26:09
-modified: 2025-12-17 00:52:23
----
 # History
 
 RNM stores rename history locally and uses it to support the `undo` command.
@@ -29,7 +21,8 @@ History files are stored locally per operating system:
 ## Default Behavior
 
 - History is enabled by default.
-- Each rename operation creates or updates a local history record.
+- History is stored per target directory (path).
+- RNM stores up to the last two rename operations per directory.
 - History is required for undo functionality.
 
 ---
@@ -51,5 +44,7 @@ This prevents the current rename operation from being recorded.
 - If history is skipped or deleted, undo is not possible for those operations.
 - History files are stored in JSON format.
 - RNM does not provide a global option to disable history; history control is handled per operation.
+- History is stored per target directory (path) and only the last two operations are kept.
+- If files or directories were renamed manually after RNM ran, undo may fail for those entries.
 
 ---

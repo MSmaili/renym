@@ -1,118 +1,91 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 22:04:40
-modified: 2025-12-17 00:51:47
----
 # Quick Start
 
-Minimum steps to run RNM
+Install RNM and run a first command.
 
 ---
 
-## Run RNM
+## Install
 
-RNM operates on the current directory by default.
+### Windows
+
+1. Download the Windows RNM executable from the Releases page. 
+2. Place the executable in a directory included in your system `PATH`. 
+
+Verify:
 
 ```bash
-rnm -m kebab
+rnm --version
 ```
-
-This renames files in the current directory using `kebab` mode.
 
 ---
 
-## Previewing changes
+### macOS
 
-Preview a rename operation using `--dry-run`:
+1. Download the macOS RNM binary from the Releases page. 
+2. Make it executable: 
+
+```bash
+chmod +x rnm
+```
+
+3. Move it to a directory in your `PATH` (example: `/usr/local/bin`). 
+
+Verify:
+
+```bash
+rnm --version
+```
+
+---
+
+### Linux
+
+1. Download the Linux RNM binary for your architecture. 
+2. Make it executable: 
+
+```bash
+chmod +x rnm
+```
+
+3. Move it to a directory in your `PATH` (example: `/usr/local/bin`). 
+
+Verify:
+
+```bash
+rnm --version
+```
+
+---
+
+## Run
+
+Preview a rename in the current directory:
 
 ```bash
 rnm -m kebab --dry-run
 ```
 
-See: [Dry Run](dry-run.md)
-
----
-
-## Specify a path
-
-Use `--path` to target a specific directory.
+Apply the same operation:
 
 ```bash
-rnm -m snake --path ./photos
+rnm -m kebab
 ```
-
-If `--path` is omitted, the current working directory is used.
-
----
-
-## Recursive operation
-
-Use `--recursive` to rename files in subdirectories.
-
-```bash
-rnm -m camel --path ./src --recursive
-```
-
----
-
-## Directory renaming
-
-Include directories in rename operations:
-
-```bash
-rnm -m title --directories
-```
-
-Rename only directories:
-
-```bash
-rnm -m title --dirs-only
-```
-
----
-
-## Ignoring paths
-
-Exclude files or directories using glob patterns:
-
-```bash
-rnm -m kebab --ignore "*.tmp" --ignore "node_modules"
-```
-
-See: [Ignore Rules](ignore.md)
-
----
-
-## Undo
-
-Revert the most recent rename operation:
-
-```bash
-rnm undo
-```
-
-Undo uses recorded history.
-
-See: [History](history.md) and [Undo](undo.md)
 
 ---
 
 ## Notes
 
-- `--dry-run` is recommended for recursive or large-scale operations.
-- Ignore rules help prevent unintended renames.
-- If history is skipped or deleted, undo is not possible for those operations.
+- RNM is distributed as a standalone binary.
+- No external dependencies are required.
+- RNM does not rename files or directories when `--dry-run` is used.
+- Package manager support and GUI distribution are planned but not yet available.
 
 ---
 
 ## See also
 
-- [Basic Usage](basic-usage.md)
-- [Modes](modes.md)
-- [CLI Reference](cli-reference.md)
-- [Safety Overview](safety.md)
+* [Basic Usage](basic-usage.md)
+* [Modes](modes.md)
+* [CLI Reference](cli-reference.md)
 
 ---

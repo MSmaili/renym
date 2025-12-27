@@ -1,11 +1,3 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 22:25:05
-modified: 2025-12-17 00:48:06
----
 # Basic Usage
 
 RNM renames files and directories by applying a rename mode to a target path, with optional scope and safety controls.
@@ -89,7 +81,9 @@ rnm --ignore "*.tmp" --ignore "node_modules"
 
 Ignore rules are applied before rename logic.
 
-Default ignore patterns exclude common version control directories. See: [Ignore Rules](ignore.md)
+Default ignore patterns exclude common version control directories. 
+
+See: [Ignore Rules](ignore.md)
 
 ---
 
@@ -127,8 +121,8 @@ RNM processes operations in the following order:
 
 ## See also
 
-- [Modes](modes.md)
 - [Quick Start](quick-start.md)
+- [Modes](modes.md)
 - [CLI Reference](cli-reference.md)
 - [Safety Overview](safety.md)
 

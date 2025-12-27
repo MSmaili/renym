@@ -1,11 +1,3 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 21:14:57
-modified: 2025-12-17 01:16:51
----
 # CLI Reference
 
 This page defines the authoritative command-line interface for RNM.

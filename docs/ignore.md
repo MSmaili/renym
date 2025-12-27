@@ -1,11 +1,3 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 22:01:14
-modified: 2025-12-17 00:48:21
----
 # Ignore Rules
 
 RNM supports ignore rules to exclude files or directories from rename operations. Ignore rules limit scope and reduce unintended changes.
@@ -14,11 +6,17 @@ RNM supports ignore rules to exclude files or directories from rename operations
 
 ## Default Ignore Rules
 
-By default, RNM ignores common version control directories:
+RNM ships with a built-in default ignore list.
+
+Examples include common version control and tooling directories such as:
 
 - `.git`
 - `.svn`
 - `.hg`
+
+The complete list is defined in:
+
+`internal/walker/defaults.go`
 
 To disable default ignores:
 

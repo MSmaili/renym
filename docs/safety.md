@@ -1,11 +1,3 @@
----
-type:
-  - document
-tags:
-  - note
-created: 2025-12-16 21:54:41
-modified: 2025-12-17 00:52:15
----
 # Safety Overview
 
 RNM is designed to perform bulk rename operations safely.
