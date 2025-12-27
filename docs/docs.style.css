@@ -1,0 +1,457 @@
+/*
+Docsify modern theme + light/dark toggle support.
+- Default: dark (variables on :root)
+- Light:  <html data-theme="light">
+- Dark:   <html data-theme="dark"> (or omit attribute)
+*/
+
+/* =========================
+   Theme variables
+========================= */
+
+:root {
+  /* ---- Dark (default) ---- */
+  --bg-0: #0a0b0f;
+  --bg-1: #0e1016;
+  --bg-2: #141827;
+  --bg-3: #1b2033;
+
+  --text-0: rgba(255, 255, 255, 0.92);
+  --text-1: rgba(255, 255, 255, 0.72);
+  --text-2: rgba(255, 255, 255, 0.56);
+
+  --border-0: rgba(255, 255, 255, 0.08);
+  --border-1: rgba(255, 255, 255, 0.12);
+
+  --accent: #6ea8fe;
+  --accent-hover: #93c5fd;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  /* Layout */
+  --sidebar-width: 16rem;
+  --content-max-width: 52rem;
+  --layout-max-width: 1100px;
+
+  /* Typography */
+  --base-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --heading-font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --code-font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  --base-font-size: 16px;
+  --base-line-height: 1.75;
+
+  /* Docsify hooks */
+  --theme-color: var(--accent);
+  --link-color: var(--accent);
+  --link-color--hover: var(--accent-hover);
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-s: 10px;
+  --radius-m: 14px;
+
+  /* Code */
+  --code-block-padding: 1.1rem 1.25rem;
+  --code-block-border-radius: 12px;
+  --code-font-size: 0.9em;
+  --code-inline-background: rgba(255, 255, 255, 0.08);
+  --code-inline-padding: 0.18em 0.42em;
+  --code-inline-border-radius: 6px;
+
+  /* Selection */
+  --selection-color: rgba(110, 168, 254, 0.22);
+}
+
+html[data-theme="light"] {
+  --bg-0: #f7f8fb;
+  --bg-1: #ffffff;
+  --bg-2: #f1f5f9;
+  --bg-3: #e9eef5;
+
+  --text-0: rgba(15, 23, 42, 0.92);
+  --text-1: rgba(15, 23, 42, 0.78);
+  --text-2: rgba(15, 23, 42, 0.60);
+
+  --border-0: rgba(15, 23, 42, 0.10);
+  --border-1: rgba(15, 23, 42, 0.14);
+
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+
+  --shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.10);
+  --code-inline-background: rgba(15, 23, 42, 0.08);
+  --selection-color: rgba(37, 99, 235, 0.18);
+}
+
+/* If user has no stored theme, follow OS preference */
+@media (prefers-color-scheme: light) {
+  html:not([data-theme]) {
+    --bg-0: #f7f8fb;
+    --bg-1: #ffffff;
+    --bg-2: #f1f5f9;
+    --bg-3: #e9eef5;
+
+    --text-0: rgba(15, 23, 42, 0.92);
+    --text-1: rgba(15, 23, 42, 0.78);
+    --text-2: rgba(15, 23, 42, 0.60);
+
+    --border-0: rgba(15, 23, 42, 0.10);
+    --border-1: rgba(15, 23, 42, 0.14);
+
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+
+    --shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.10);
+    --code-inline-background: rgba(15, 23, 42, 0.08);
+    --selection-color: rgba(37, 99, 235, 0.18);
+  }
+}
+
+/* =========================
+   Base
+========================= */
+
+html { scroll-behavior: smooth; font-size: var(--base-font-size); }
+body {
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--base-font-family);
+  line-height: var(--base-line-height);
+}
+
+::selection { background: var(--selection-color); }
+
+/* Transitions (targeted, avoids global hover jank) */
+a, button, input, textarea, select,
+.sidebar a, .sidebar .search input,
+.sidebar-toggle, .theme-toggle,
+.markdown-section a {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform, filter;
+  transition-duration: 120ms;
+  transition-timing-function: cubic-bezier(.2,.8,.2,1);
+}
+
+
+/* Layout container (subtle) */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: max(0px, calc((100vw - var(--layout-max-width)) / 2));
+  width: min(var(--layout-max-width), 100vw);
+  height: 100vh;
+  background: transparent;
+  z-index: -1;
+}
+
+/* =========================
+   Sidebar (no borders)
+========================= */
+
+.sidebar {
+  background: color-mix(in srgb, var(--bg-1) 92%, transparent) !important;
+  border-right: none !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(10px);
+}
+
+.sidebar-nav, .sidebar-nav * {
+  border: none !important;
+}
+
+.sidebar .search {
+  padding: 0.75rem 0.75rem 0.25rem 0.75rem;
+}
+
+.sidebar .search input {
+  background: color-mix(in srgb, var(--bg-2) 75%, transparent) !important;
+  color: var(--text-0) !important;
+  border: 1px solid var(--border-0) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  padding: 0.6rem 0.75rem !important;
+  outline: none !important;
+}
+
+.sidebar .search input:focus {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-0)) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent) !important;
+}
+
+.sidebar ul {
+  margin: 0.35rem 0 1rem 0 !important;
+  padding: 0 0.5rem 1.25rem 0.5rem !important;
+}
+
+.sidebar li { margin: 0.06rem 0 !important; }
+
+.sidebar a {
+  color: var(--text-1) !important;
+  text-decoration: none !important;
+  border: none !important;
+  display: block !important;
+  padding: 0.42rem 0.65rem !important;
+  border-radius: 10px !important;
+}
+
+.sidebar a:hover {
+  background: color-mix(in srgb, var(--bg-3) 70%, transparent) !important;
+  color: var(--text-0) !important;
+}
+
+.sidebar a.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent) !important;
+  color: var(--text-0) !important;
+}
+
+.sidebar .app-name-link,
+.sidebar .app-name {
+  color: var(--text-0) !important;
+}
+
+/* =========================
+   Content
+========================= */
+
+section.content {
+  background: transparent !important;
+}
+
+.markdown-section {
+  max-width: var(--content-max-width);
+}
+
+.markdown-section h1 {
+  font-weight: 760;
+  letter-spacing: -0.02em;
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-0);
+  color: var(--text-0);
+}
+
+.markdown-section h2 {
+  font-weight: 690;
+  letter-spacing: -0.01em;
+  margin: 1.75rem 0 0.75rem 0;
+  color: var(--text-0);
+}
+
+.markdown-section h3,
+.markdown-section h4 {
+  font-weight: 650;
+  color: var(--text-1);
+}
+
+.markdown-section p,
+.markdown-section li {
+  color: var(--text-1);
+}
+
+.markdown-section strong { color: var(--text-0); font-weight: 700; }
+
+/* Links (no layout shift on hover) */
+.markdown-section a {
+  color: var(--link-color);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--link-color) 0%, transparent);
+  padding-bottom: 1px;
+}
+
+.markdown-section a:hover {
+  color: var(--link-color--hover);
+  border-bottom-color: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+/* Inline code */
+.markdown-section code {
+  font-family: var(--code-font-family);
+  font-size: var(--code-font-size);
+  background: var(--code-inline-background);
+  padding: var(--code-inline-padding);
+  border-radius: var(--code-inline-border-radius);
+}
+
+/* Code blocks */
+.markdown-section pre {
+  background: color-mix(in srgb, var(--bg-2) 92%, transparent) !important;
+  border: 1px solid var(--border-0) !important;
+  border-radius: var(--code-block-border-radius) !important;
+  box-shadow: none !important;
+}
+
+.markdown-section pre > code {
+  background: transparent !important;
+  padding: var(--code-block-padding) !important;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Tables */
+.markdown-section table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border-0);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.markdown-section table th,
+.markdown-section table td {
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid var(--border-0);
+  color: var(--text-1);
+}
+
+.markdown-section table th {
+  background: color-mix(in srgb, var(--bg-2) 85%, transparent);
+  color: var(--text-0);
+  font-weight: 650;
+}
+
+.markdown-section table tr:last-child td { border-bottom: none; }
+
+/* Blockquotes */
+.markdown-section blockquote {
+  margin: 1.25rem 0;
+  padding: 0.9rem 1rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 80%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-2));
+  border-radius: 0 var(--radius-m) var(--radius-m) 0;
+  color: var(--text-1);
+}
+
+/* Horizontal rule */
+.markdown-section hr {
+  border: none;
+  border-top: 1px solid var(--border-0);
+  margin: 2rem 0;
+}
+
+/* =========================
+   Theme toggle button
+========================= */
+
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 999;
+  appearance: none;
+  border: 1px solid var(--border-0);
+  background: color-mix(in srgb, var(--bg-1) 82%, transparent);
+  color: var(--text-0);
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  box-shadow: none;
+  font: 600 0.85rem/1 var(--base-font-family);
+}
+
+.theme-toggle:hover {
+  background: color-mix(in srgb, var(--bg-2) 82%, transparent);
+  border-color: var(--border-1);
+}
+
+.theme-toggle:active { transform: translateY(1px); }
+
+/* =========================
+   Scrollbars (WebKit)
+========================= */
+
+.sidebar::-webkit-scrollbar,
+.markdown-section pre::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb,
+.markdown-section pre::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-2) 28%, transparent);
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover,
+.markdown-section pre::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-2) 40%, transparent);
+}
+
+/* =========================
+   Desktop layout
+========================= */
+
+@media (min-width: 768px) {
+  .sidebar-toggle { display: none !important; }
+  body.close .sidebar { transform: none !important; }
+
+  .sidebar {
+    position: fixed !important;
+    left: max(0px, calc((100vw - var(--layout-max-width)) / 2)) !important;
+    width: var(--sidebar-width) !important;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 10;
+    transform: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    padding: 1rem 0.6rem 1.25rem 0.6rem;
+  }
+
+  section.content {
+    margin-left: max(
+      var(--sidebar-width),
+      calc((100vw - var(--layout-max-width)) / 2 + var(--sidebar-width))
+    ) !important;
+    padding-left: 3rem !important;
+    padding-right: calc(max(0px, (100vw - var(--layout-max-width)) / 2) + 3rem) !important;
+    padding-top: 2.25rem;
+    padding-bottom: 2.5rem;
+    max-width: none;
+    min-height: 100vh;
+  }
+}
+
+@media (min-width: 1400px) {
+  :root { --layout-max-width: 1200px; }
+  section.content { padding-left: 4rem !important; }
+}
+
+/* =========================
+   Mobile layout
+========================= */
+
+@media (max-width: 767px) {
+  body::before { display: none; }
+
+  .sidebar-toggle {
+    display: flex !important;
+    width: auto !important;
+    height: auto !important;
+    position: fixed !important;
+    top: 1rem;
+    left: 1rem;
+    background: color-mix(in srgb, var(--bg-1) 82%, transparent);
+    border: 1px solid var(--border-0);
+    border-radius: 12px;
+    padding: 9px;
+    z-index: 25;
+    backdrop-filter: blur(10px);
+  }
+
+  .sidebar {
+    background: var(--bg-1) !important;
+    border-right: none !important;
+    z-index: 20;
+  }
+
+  section.content {
+    padding: 1.25rem 1.5rem !important;
+    background: transparent;
+  }
+}

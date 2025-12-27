@@ -43,7 +43,6 @@ renym undo
 
 ## Documentation
 
-- [Installation](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/installation.md)
 - [Quick Start](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/quick-start.md)
 - [Basic Usage](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/basic-usage.md)
 - [Modes](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/modes.md)
