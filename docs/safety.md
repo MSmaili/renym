@@ -1,6 +1,6 @@
 # Safety Overview
 
-RNM is designed to perform bulk rename operations safely.
+Renym is designed to perform bulk rename operations safely.
 Safety is achieved through previewing, scoped execution, local history, and undo support.
 
 This page describes how these features work together.
@@ -24,7 +24,7 @@ See: [Dry Run](dry-run.md)
 
 ### History
 
-RNM records rename operations locally to enable undo functionality.
+Renym records rename operations locally to enable undo functionality.
 
 - Enabled by default
 - Stored per operation
@@ -70,7 +70,7 @@ See: [Ignore Rules](ignore.md)
 
 ## Summary
 
-RNM avoids irreversible operations by design.
+Renym avoids irreversible operations by design.
 Previewing, history, and undo are first-class features and should be used for all non-trivial rename operations.
 
 ---

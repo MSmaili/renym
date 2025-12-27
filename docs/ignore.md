@@ -1,12 +1,12 @@
 # Ignore Rules
 
-RNM supports ignore rules to exclude files or directories from rename operations. Ignore rules limit scope and reduce unintended changes.
+Renym supports ignore rules to exclude files or directories from rename operations. Ignore rules limit scope and reduce unintended changes.
 
 ---
 
 ## Default Ignore Rules
 
-RNM ships with a built-in default ignore list.
+Renym ships with a built-in default ignore list.
 
 Examples include common version control and tooling directories such as:
 
@@ -21,7 +21,7 @@ The complete list is defined in:
 To disable default ignores:
 
 ```bash
-rnm --no-default-ignore
+renym --no-default-ignore
 ```
 
 ---
@@ -31,13 +31,13 @@ rnm --no-default-ignore
 Use `--ignore` to exclude files or directories matching a glob pattern:
 
 ```bash
-rnm --ignore "*.tmp"
+renym --ignore "*.tmp"
 ```
 
 You can use `--ignore` multiple times:
 
 ```bash
-rnm --ignore "*.tmp" --ignore "folder-name"
+renym --ignore "*.tmp" --ignore "folder-name"
 ```
 
 ---
@@ -46,9 +46,9 @@ rnm --ignore "*.tmp" --ignore "folder-name"
 
 |Command|Description|
 |---|---|
-|`rnm --ignore "*.log"`|Ignore all `.log` files|
-|`rnm --ignore "node_modules" -r`|Ignore `node_modules` during recursive rename|
-|`rnm --no-default-ignore`|Include VCS directories in rename|
+|`renym --ignore "*.log"`|Ignore all `.log` files|
+|`renym --ignore "node_modules" -r`|Ignore `node_modules` during recursive rename|
+|`renym --no-default-ignore`|Include VCS directories in rename|
 
 ---
 
@@ -56,7 +56,7 @@ rnm --ignore "*.tmp" --ignore "folder-name"
 
 - Ignore rules are evaluated before rename operations.
 - Ignored paths are skipped and not processed for renaming.
-- RNM does not currently support ignore files (for example, `.rnmignore`).
+- Renym does not currently support ignore files (for example, `.renymignore`).
 - Ignore rules must be provided via CLI flags.
 
 ---

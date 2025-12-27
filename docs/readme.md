@@ -1,10 +1,10 @@
-# RNM
+# Renym
 
-RNM is a cross-platform CLI tool for batch renaming files and directories using consistent casing rules and explicit scope control. 
+Renym is a cross-platform CLI tool for batch renaming files and directories using consistent casing rules and explicit scope control. 
 
 It supports previewing changes, ignoring paths, and undo via local history. 
 
-RNM is CLI-first. A GUI that mirrors the CLI behavior is planned. 
+Renym is CLI-first. A GUI that mirrors the CLI behavior is planned. 
 
 ---
 
@@ -24,35 +24,35 @@ RNM is CLI-first. A GUI that mirrors the CLI behavior is planned.
 Preview a rename:
 
 ```bash
-rnm -m kebab --dry-run
+renym -m kebab --dry-run
 ```
 
 Apply it:
 
 ```bash
-rnm -m kebab
+renym -m kebab
 ```
 
 Undo the last operation:
 
 ```bash
-rnm undo
+renym undo
 ```
 
 ---
 
 ## Documentation
 
-- [Installation](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/installation.md)
-- [Quick Start](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/quick-start.md)
-- [Basic Usage](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/basic-usage.md)
-- [Modes](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/modes.md)
-- [CLI Reference](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/cli-reference.md)
-- [Safety Overview](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/safety.md)
-    - [Dry Run](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/dry-run.md)
-    - [Ignore Rules](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/ignore.md)
-    - [History](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/history.md)
-    - [Undo](https://github.com/MSmaili/smaili/blob/main/projects/rnm-rename-tool/documentation/undo.md)
+- [Installation](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/installation.md)
+- [Quick Start](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/quick-start.md)
+- [Basic Usage](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/basic-usage.md)
+- [Modes](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/modes.md)
+- [CLI Reference](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/cli-reference.md)
+- [Safety Overview](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/safety.md)
+    - [Dry Run](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/dry-run.md)
+    - [Ignore Rules](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/ignore.md)
+    - [History](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/history.md)
+    - [Undo](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/undo.md)
 
 ---
 

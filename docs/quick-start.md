@@ -1,6 +1,6 @@
 # Quick Start
 
-Install RNM and run a first command.
+Install Renym and run a first command.
 
 ---
 
@@ -8,24 +8,24 @@ Install RNM and run a first command.
 
 ### Windows
 
-1. Download the Windows RNM executable from the Releases page. 
+1. Download the Windows Renym executable from the Releases page. 
 2. Place the executable in a directory included in your system `PATH`. 
 
 Verify:
 
 ```bash
-rnm --version
+renym --version
 ```
 
 ---
 
 ### macOS
 
-1. Download the macOS RNM binary from the Releases page. 
+1. Download the macOS Renym binary from the Releases page. 
 2. Make it executable: 
 
 ```bash
-chmod +x rnm
+chmod +x renym
 ```
 
 3. Move it to a directory in your `PATH` (example: `/usr/local/bin`). 
@@ -33,18 +33,18 @@ chmod +x rnm
 Verify:
 
 ```bash
-rnm --version
+renym --version
 ```
 
 ---
 
 ### Linux
 
-1. Download the Linux RNM binary for your architecture. 
+1. Download the Linux Renym binary for your architecture. 
 2. Make it executable: 
 
 ```bash
-chmod +x rnm
+chmod +x renym
 ```
 
 3. Move it to a directory in your `PATH` (example: `/usr/local/bin`). 
@@ -52,7 +52,7 @@ chmod +x rnm
 Verify:
 
 ```bash
-rnm --version
+renym --version
 ```
 
 ---
@@ -62,22 +62,22 @@ rnm --version
 Preview a rename in the current directory:
 
 ```bash
-rnm -m kebab --dry-run
+renym -m kebab --dry-run
 ```
 
 Apply the same operation:
 
 ```bash
-rnm -m kebab
+renym -m kebab
 ```
 
 ---
 
 ## Notes
 
-- RNM is distributed as a standalone binary.
+- Renym is distributed as a standalone binary.
 - No external dependencies are required.
-- RNM does not rename files or directories when `--dry-run` is used.
+- Renym does not rename files or directories when `--dry-run` is used.
 - Package manager support and GUI distribution are planned but not yet available.
 
 ---

@@ -22,8 +22,8 @@ Undo works only if:
 
 | Command           | Description                                                    |
 | ----------------- | -------------------------------------------------------------- |
-| `rnm undo`        | Undo the most recent rename operation in the current directory |
-| `rnm undo <path>` | Undo rename operations for a specific path                     |
+| `renym undo`        | Undo the most recent rename operation in the current directory |
+| `renym undo <path>` | Undo rename operations for a specific path                     |
 
 ---
 

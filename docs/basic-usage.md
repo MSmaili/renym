@@ -1,13 +1,13 @@
 # Basic Usage
 
-RNM renames files and directories by applying a rename mode to a target path, with optional scope and safety controls.
+Renym renames files and directories by applying a rename mode to a target path, with optional scope and safety controls.
 
 ---
 
 ## Core Command Structure
 
 ```bash
-rnm --mode <mode> [flags]
+renym --mode <mode> [flags]
 ```
 
 A rename operation consists of:
@@ -20,16 +20,16 @@ A rename operation consists of:
 
 ## Target Path
 
-RNM operates on the current working directory by default.
+Renym operates on the current working directory by default.
 
 ```bash
-rnm -m kebab
+renym -m kebab
 ```
 
 To target a specific path:
 
 ```bash
-rnm -m kebab --path ./photos
+renym -m kebab --path ./photos
 ```
 
 The path may point to:
@@ -43,30 +43,30 @@ The path may point to:
 
 ### Recursive operation
 
-By default, RNM processes only the immediate contents of the target directory.
+By default, Renym processes only the immediate contents of the target directory.
 
 To include subdirectories:
 
 ```bash
-rnm -m snake --recursive
+renym -m snake --recursive
 ```
 
 ---
 
 ### Directory handling
 
-By default, RNM renames files only.
+By default, Renym renames files only.
 
 To include directories:
 
 ```bash
-rnm -m kebab --directories
+renym -m kebab --directories
 ```
 
 To rename only directories:
 
 ```bash
-rnm -m kebab --dirs-only
+renym -m kebab --dirs-only
 ```
 
 ---
@@ -76,7 +76,7 @@ rnm -m kebab --dirs-only
 Paths can be excluded using ignore patterns.
 
 ```bash
-rnm --ignore "*.tmp" --ignore "node_modules"
+renym --ignore "*.tmp" --ignore "node_modules"
 ```
 
 Ignore rules are applied before rename logic.
@@ -89,10 +89,10 @@ See: [Ignore Rules](ignore.md)
 
 ## Safety Controls
 
-RNM provides mechanisms to limit unintended changes.
+Renym provides mechanisms to limit unintended changes.
 
 - Preview changes using `--dry-run`
-- Revert operations using `rnm undo`
+- Revert operations using `renym undo`
 - Skip history recording using `--skip-history`
 
 See: [Safety Overview](safety.md)
@@ -101,7 +101,7 @@ See: [Safety Overview](safety.md)
 
 ## Execution Order
 
-RNM processes operations in the following order:
+Renym processes operations in the following order:
 
 1. Resolve target path
 2. Apply ignore rules

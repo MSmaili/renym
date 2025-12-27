@@ -1,6 +1,6 @@
 # Modes
 
-Modes define how RNM transforms file and directory names.
+Modes define how Renym transforms file and directory names.
 
 - By default, modes apply to filenames only.
 - When directory renaming is enabled, the same transformation rules apply to directory names.
@@ -27,13 +27,13 @@ Modes define how RNM transforms file and directory names.
 Modes are selected using the `--mode` (`-m`) flag.
 
 ```bash
-rnm --mode kebab
+renym --mode kebab
 ```
 
 Short form:
 
 ```bash
-rnm -m kebab
+renym -m kebab
 ```
 
 ---
@@ -54,13 +54,13 @@ By default, modes apply to files only.
 To include directories:
 
 ```bash
-rnm -m kebab --directories
+renym -m kebab --directories
 ```
 
 To rename only directories:
 
 ```bash
-rnm -m kebab --dirs-only
+renym -m kebab --dirs-only
 ```
 
 ---
@@ -69,16 +69,16 @@ rnm -m kebab --dirs-only
 
 |Command|Result|
 |---|---|
-|`rnm -m kebab`|Rename files in the current directory|
-|`rnm -m snake -r`|Rename files recursively|
-|`rnm -m title --directories`|Rename files and directories|
+|`renym -m kebab`|Rename files in the current directory|
+|`renym -m snake -r`|Rename files recursively|
+|`renym -m title --directories`|Rename files and directories|
 
 ---
 
 ## Notes
 
 - Modes do not modify file contents.
-- If a rename results in a conflicting name, RNM may skip the item or fail the operation depending on the conflict and platform behavior.
+- If a rename results in a conflicting name, Renym may skip the item or fail the operation depending on the conflict and platform behavior.
 - Use `--dry-run` to preview results.
 
 ---
