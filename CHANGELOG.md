@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.1.0] - 2025-12-27
+
+### Added
+
+- Added a more detailed doc for how to use the cli
+- The cli name now is refered as Renym
+- Added senetence case
+
+### Changed
+
+- History now is stored globally, instead in directory
+- Small refactoring and code clean-up
+
 ## [v0.0.4] - 2025-12-08
 
 ### Added
