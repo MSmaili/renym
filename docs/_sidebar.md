@@ -1,5 +1,3 @@
-# Documentation
-
 - [Overview](readme.md)
 - [Quick Start](quick-start.md)
 - [Basic Usage](basic-usage.md)

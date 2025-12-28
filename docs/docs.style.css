@@ -1,0 +1,310 @@
+/* =========================================
+   Zen-style Sidebar Rows (full width, inset)
+========================================= */
+
+.sidebar ul li a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* allows right-side affordances later */
+  gap: 0.5rem;
+
+  color: var(--text-muted) !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+
+  /* Full-width row within the padded sidebar frame */
+  width: 100%;
+  border-radius: 8px;
+  padding: 8px 10px !important;
+
+  background: transparent;
+  border: 1px solid transparent !important;
+}
+
+/* Hover */
+.sidebar ul li a:hover {
+  color: var(--text-main) !important;
+  background-color: var(--bg-hover);
+  border-color: rgba(255,255,255,0.06) !important;
+}
+
+/* Active */
+.sidebar ul li.active > a,
+.sidebar ul li a.active {
+  color: var(--text-main) !important;
+  background-color: var(--bg-active) !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  font-weight: 600;
+}
+
+
+/* Renym "Zen" Theme - Floating Pills Fix */
+
+:root {
+  /* ---- Palette: Zen Dark ---- */
+  --bg-body: #09090b;       /* Deep matte black */
+  --bg-sidebar: #09090b;    /* Seamless sidebar */
+  
+  /* Interaction States */
+  --bg-hover: #18181b;      /* Very subtle hover */
+  --bg-active: #27272a;     /* Distinct active state */
+  
+  /* Text */
+  --text-main: #f4f4f5;     /* Active text (Bright) */
+  --text-muted: #a1a1aa;    /* Inactive text (Gray) */
+  --text-faint: #52525b;    /* Meta/Borders */
+  
+  /* Layout */
+  --sidebar-width: 17rem;   /* Slightly narrower for sleekness */
+  --content-max-width: 55rem;
+  --font-base: "Inter", -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --radius: 6px;            /* Standard pill radius */
+}
+
+/* =========================================
+   Global Reset 
+========================================= */
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--bg-body);
+  color: var(--text-muted);
+  font-family: var(--font-base);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Smooth out interaction changes */
+a, li { transition: all 0.1s ease-out; }
+
+/* =========================================
+   The Sidebar - Floating Layout
+========================================= */
+
+.sidebar {
+  background-color: var(--bg-sidebar) !important;
+  border-right: 1px solid rgba(255,255,255,0.06) !important;
+  width: var(--sidebar-width);
+  padding: 1.5rem 0.75rem !important; /* Padding creates the "frame" for pills */
+  overflow-y: auto;
+}
+
+/* App Name */
+.app-name-link {
+  color: var(--text-main) !important;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 0 0.75rem; /* Align with pills */
+  margin-bottom: 1.5rem;
+  display: block;
+}
+
+/* Search Input */
+.sidebar .search {
+  margin-bottom: 1.5rem;
+  border: none !important;
+  padding: 0 0.25rem !important;
+}
+
+.sidebar .search input {
+  background: var(--bg-hover) !important;
+  border: 1px solid transparent !important;
+  color: var(--text-muted) !important;
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.85rem;
+  box-shadow: none !important;
+}
+
+.sidebar .search input:focus {
+  background: var(--bg-active) !important;
+  color: var(--text-main) !important;
+  border-color: var(--text-faint) !important;
+}
+
+/* Navigation List & Spacing */
+.sidebar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar li {
+  margin: 2px 0; /* Vertical breathing room between items */
+}
+
+/* =========================================
+   THE FIX: Floating Pills
+========================================= */
+
+/* Hover State - Subtle */
+/* ACTIVE STATE - The "Zen" Look */
+.sidebar ul li.active > a,
+.sidebar ul li a.active {
+  color: var(--text-main) !important;       /* Bright White */
+  background-color: var(--bg-active) !important; /* Dark Gray Pill */
+  font-weight: 600;
+}
+
+/* Nested Items (Sub-menu) */
+.app-sub-sidebar {
+  padding-left: 0 !important; /* Reset default padding */
+}
+
+.app-sub-sidebar li a {
+  font-size: 0.85rem !important;
+  padding-left: 1.5rem !important; /* Indent text inside the pill */
+}
+
+/* Fix "Arrows" if collapsible plugin is used */
+.sidebar-nav .collapse-sign {
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+/* =========================================
+   Content Area
+========================================= */
+
+section.content {
+  padding-top: 3rem;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.markdown-section {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 0 4rem 5rem 4rem; /* More whitespace */
+}
+
+/* Headers */
+.markdown-section h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  margin-bottom: 2rem;
+}
+
+.markdown-section h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--bg-active);
+  padding-bottom: 0.5rem;
+  margin-top: 3rem;
+  color: var(--text-main);
+}
+
+.markdown-section h3, h4 {
+  color: var(--text-main);
+  margin-top: 2rem;
+}
+
+.markdown-section p, 
+.markdown-section ul, 
+.markdown-section ol {
+  color: #a1a1aa; 
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.markdown-section strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.markdown-section a {
+  color: #60a5fa; /* Blue accent only for content links */
+  text-decoration: none;
+}
+.markdown-section a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Code Blocks */
+.markdown-section pre {
+  background: var(--bg-hover) !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+  box-shadow: none !important;
+}
+
+.markdown-section code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: #e2e8f0;
+}
+
+.markdown-section p > code {
+  background: rgba(255,255,255,0.08);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+}
+
+/* =========================================
+   Mobile / Responsive
+========================================= */
+@media (min-width: 768px) {
+  .sidebar-toggle { display: none; }
+  
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 10;
+  }
+  
+  section.content {
+    margin-left: var(--sidebar-width) !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .sidebar {
+    background: var(--bg-body) !important;
+    border-right: 1px solid var(--text-faint) !important;
+    left: 0;
+  }
+  .markdown-section {
+    padding: 0 1.5rem;
+  }
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Section labels like "Getting Started" */
+.sidebar-nav > p {
+  margin: 18px 10px 8px 10px;
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* Optional: tighter overall sidebar spacing (Zen-like) */
+.sidebar {
+  padding: 1.25rem 0.75rem !important;
+}
+
+.sidebar li {
+  margin: 3px 0;
+}
+
+/* Nested items slightly tighter */
+.app-sub-sidebar li a {
+  font-size: 0.86rem !important;
+  padding-left: 22px !important;
+  opacity: 0.95;
+}
