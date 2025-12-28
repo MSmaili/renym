@@ -1,13 +1,13 @@
-project_name: rnm
+project_name: renym
 
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: rnm
+  - id: renym
     main: ./cmd
-    binary: rnm
+    binary: renym
     env:
       - CGO_ENABLED=0
     goos:
@@ -21,10 +21,10 @@ builds:
       - goos: windows
         goarch: arm64
     ldflags:
-      - -s -w -X github.com/MSmaili/rnm/internal/version.Version={{.Version}}
+      - -s -w -X github.com/MSmaili/renym/internal/version.Version={{.Version}}
 
 archives:
-  - id: rnm
+  - id: renym
     format: tar.gz
     name_template: >-
       {{ .ProjectName }}_

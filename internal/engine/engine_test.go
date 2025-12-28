@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MSmaili/rnm/internal/common/testutils/assert"
+	"github.com/MSmaili/renym/internal/common/testutils/assert"
 )
 
 type mockAdapter struct {

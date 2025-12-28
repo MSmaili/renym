@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/MSmaili/rnm/internal/common/testutils/assert"
+	"github.com/MSmaili/renym/internal/common/testutils/assert"
 )
 
 func TestMapSlice(t *testing.T) {

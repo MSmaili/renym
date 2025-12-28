@@ -1,4 +1,4 @@
-module github.com/MSmaili/rnm
+module github.com/MSmaili/renym
 
 go 1.25.3
 

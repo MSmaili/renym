@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/MSmaili/rnm/internal/cli"
-	"github.com/MSmaili/rnm/internal/log"
+	"github.com/MSmaili/renym/internal/cli"
+	"github.com/MSmaili/renym/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ type GlobalConfig struct {
 var globalCfg GlobalConfig
 
 var rootCmd = &cobra.Command{
-	Use:   "rnm [flags]",
+	Use:   "renym [flags]",
 	Short: "Fast, safe, cross-platform file rename tool",
 	Long: `Rename files and directories using automatic naming patterns.
 
@@ -31,11 +31,11 @@ Modes:
   kebab   → file-name
   title   → File Name`,
 	Example: `
-  rnm -m upper
-  rnm -m snake -p ./photos
-  rnm -m kebab --dry-run
-  rnm -m snake -v          # verbose output
-  rnm -m snake -q          # quiet mode`,
+  renym -m upper
+  renym -m snake -p ./photos
+  renym -m kebab --dry-run
+  renym -m snake -v          # verbose output
+  renym -m snake -q          # quiet mode`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return setupLogging()
 	},

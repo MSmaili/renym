@@ -26,7 +26,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Fix the undo command, where we were undo-ing files recursivly
-- Add .rnm-history into the ignore paths
+- Add .renym-history into the ignore paths
 
 ## [v0.0.3] - 2025-12-07
 
@@ -91,8 +91,8 @@ All notable changes to this project will be documented in this file.
 - Main directory path issues
 - Missing GoReleaser configuration
 
-[Unreleased]: https://github.com/MSmaili/rnm/compare/v0.0.4...HEAD
-[v0.0.4]: https://github.com/MSmaili/rnm/compare/v0.0.3...v0.0.4
-[v0.0.3]: https://github.com/MSmaili/rnm/compare/v0.0.2...v0.0.3
-[v0.0.2]: https://github.com/MSmaili/rnm/compare/v0.0.1...v0.0.2
-[v0.0.1]: https://github.com/MSmaili/rnm/releases/tag/v0.0.1
+[Unreleased]: https://github.com/MSmaili/renym/compare/v0.0.4...HEAD
+[v0.0.4]: https://github.com/MSmaili/renym/compare/v0.0.3...v0.0.4
+[v0.0.3]: https://github.com/MSmaili/renym/compare/v0.0.2...v0.0.3
+[v0.0.2]: https://github.com/MSmaili/renym/compare/v0.0.1...v0.0.2
+[v0.0.1]: https://github.com/MSmaili/renym/releases/tag/v0.0.1

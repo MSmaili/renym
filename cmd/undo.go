@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/MSmaili/rnm/internal/common"
-	"github.com/MSmaili/rnm/internal/fs"
-	"github.com/MSmaili/rnm/internal/history"
-	"github.com/MSmaili/rnm/internal/log"
+	"github.com/MSmaili/renym/internal/common"
+	"github.com/MSmaili/renym/internal/fs"
+	"github.com/MSmaili/renym/internal/history"
+	"github.com/MSmaili/renym/internal/log"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +17,7 @@ var undoCmd = &cobra.Command{
 	Long:  `Undo rename operations from history.`,
 	RunE:  runUndo,
 	Example: `  # Undo most recent operation in current directory
-  rnm undo
+  renym undo
   `,
 }
 

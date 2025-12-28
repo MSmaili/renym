@@ -1,4 +1,4 @@
-# rnm
+# renym
 
 A fast, safe, cross-platform file rename tool.
 
@@ -7,38 +7,38 @@ A fast, safe, cross-platform file rename tool.
 ### Go
 
 ```bash
-go install github.com/MSmaili/rnm@latest
+go install github.com/MSmaili/renym@latest
 ```
 
 ### Binary
 
-Download the latest release from [GitHub Releases](https://github.com/MSmaili/rnm/releases/latest).
+Download the latest release from [GitHub Releases](https://github.com/MSmaili/renym/releases/latest).
 
 #### Windows
 
 TODO: probably we need to improve this and add the package in winget...
 
-1. Download `rnm_<version>_windows_amd64.zip` (or `arm64` for ARM devices)
-2. Extract the zip file to a folder, e.g., `C:\Program Files\rnm\`
+1. Download `renym_<version>_windows_amd64.zip` (or `arm64` for ARM devices)
+2. Extract the zip file to a folder, e.g., `C:\Program Files\renym\`
 3. Add to PATH:
    - Open Start Menu, search **"Environment Variables"**
    - Click **"Edit the system environment variables"**
    - Click **"Environment Variables..."**
    - Under **"User variables"**, select **Path** → **Edit** → **New**
-   - Add the folder path: `C:\Program Files\rnm`
+   - Add the folder path: `C:\Program Files\renym`
    - Click **OK** to save
-4. Open a new terminal and verify: `rnm --version`
+4. Open a new terminal and verify: `renym --version`
 
 #### macOS / Linux
 
 ```bash
 # Download (replace <version> and <os>/<arch> as needed)
-curl -LO https://github.com/MSmaili/rnm/releases/latest/download/rnm_<version>_<os>_<arch>.tar.gz
+curl -LO https://github.com/MSmaili/renym/releases/latest/download/renym_<version>_<os>_<arch>.tar.gz
 
 # Extract and install to ~/.local/bin
-tar -xzf rnm_*.tar.gz
+tar -xzf renym_*.tar.gz
 mkdir -p ~/.local/bin
-mv rnm ~/.local/bin/
+mv renym ~/.local/bin/
 
 # Add to PATH if already is not there (add this to your ~/.bashrc or ~/.zshrc)
 export PATH="$HOME/.local/bin:$PATH"
@@ -50,22 +50,22 @@ Available archives:
 - macOS Apple Silicon: `darwin_arm64`
 - Linux: `linux_amd64` or `linux_arm64`
 
-Verify installation: `rnm --version`
+Verify installation: `renym --version`
 
 ## Quick Start
 
 ```bash
 # Convert filenames to snake_case
-rnm -m snake -p ./photos
+renym -m snake -p ./photos
 
 # Preview changes first (dry-run)
-rnm -m kebab -p ./documents --dry-run
+renym -m kebab -p ./documents --dry-run
 
 # Rename recursively
-rnm -m pascal -p ./src -r
+renym -m pascal -p ./src -r
 
 # Undo last rename
-rnm undo
+renym undo
 ```
 
 ## Modes

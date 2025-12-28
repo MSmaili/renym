@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/MSmaili/rnm/internal/common/testutils"
+	"github.com/MSmaili/renym/internal/common/testutils"
 )
 
 func TestApply(t *testing.T) {

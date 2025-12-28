@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MSmaili/rnm/internal/cli"
-	"github.com/MSmaili/rnm/internal/common"
-	"github.com/MSmaili/rnm/internal/engine"
-	"github.com/MSmaili/rnm/internal/fs"
-	"github.com/MSmaili/rnm/internal/history"
-	"github.com/MSmaili/rnm/internal/log"
-	"github.com/MSmaili/rnm/internal/version"
-	"github.com/MSmaili/rnm/internal/walker"
+	"github.com/MSmaili/renym/internal/cli"
+	"github.com/MSmaili/renym/internal/common"
+	"github.com/MSmaili/renym/internal/engine"
+	"github.com/MSmaili/renym/internal/fs"
+	"github.com/MSmaili/renym/internal/history"
+	"github.com/MSmaili/renym/internal/log"
+	"github.com/MSmaili/renym/internal/version"
+	"github.com/MSmaili/renym/internal/walker"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +63,7 @@ func init() {
 		if strings.Contains(msg, "flag needs an argument") && (strings.HasSuffix(msg, "-m") || strings.HasSuffix(msg, "--mode")) {
 			log.Error("The --mode flag requires a value.\n")
 			log.Error("Available modes: upper, lower, pascal, camel, snake, kebab, title\n")
-			log.Error("\nRun rnm --help for more info\n")
+			log.Error("\nRun renym --help for more info\n")
 			os.Exit(1)
 		}
 
@@ -73,7 +73,7 @@ func init() {
 
 func validateFlags(cmd *cobra.Command, args []string) error {
 	if showVersion {
-		log.Print("rnm version %s\n", version.Version)
+		log.Print("renym version %s\n", version.Version)
 		os.Exit(0)
 	}
 	if !cmd.Flags().Changed("mode") {

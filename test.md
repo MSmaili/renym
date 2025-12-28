@@ -6,6 +6,7 @@ tags:
 created: 2025-12-16 21:21:40
 modified: 2025-12-17 00:52:23
 ---
+
 # Undo
 
 Undo reverts rename operations using locally recorded history.
@@ -28,10 +29,10 @@ Undo works only if:
 
 ## Usage
 
-| Command           | Description                                                    |
-| ----------------- | -------------------------------------------------------------- |
-| `rnm undo`        | Undo the most recent rename operation in the current directory |
-| `rnm undo <path>` | Undo rename operations for a specific path                     |
+| Command             | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `renym undo`        | Undo the most recent rename operation in the current directory |
+| `renym undo <path>` | Undo rename operations for a specific path                     |
 
 ---
 
@@ -42,3 +43,4 @@ Undo works only if:
 - History files are stored in JSON format.
 
 ---
+

@@ -25,7 +25,7 @@ func NewGlobalStore(pathID PathIdentifier) (*GlobalStore, error) {
 		return nil, fmt.Errorf("failed to get config dir: %w", err)
 	}
 
-	rnmConfigDir := filepath.Join(configDir, "rnm")
+	rnmConfigDir := filepath.Join(configDir, "renym")
 
 	return &GlobalStore{
 		configDir: rnmConfigDir,

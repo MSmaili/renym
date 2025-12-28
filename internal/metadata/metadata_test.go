@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MSmaili/rnm/internal/common/testutils/assert"
+	"github.com/MSmaili/renym/internal/common/testutils/assert"
 )
 
 func TestGetMetadataValidFile(t *testing.T) {

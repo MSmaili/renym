@@ -5,7 +5,7 @@ package fs
 import (
 	"testing"
 
-	"github.com/MSmaili/rnm/internal/common/testutils/assert"
+	"github.com/MSmaili/renym/internal/common/testutils/assert"
 )
 
 func TestUnixFSAdapterIsValidName(t *testing.T) {
