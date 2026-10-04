@@ -299,11 +299,13 @@ func TestStalePlanAndCancellationDoNotMutate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	put(t, old, "modified")
+	// A size change is deterministic even when two writes share a filesystem
+	// timestamp tick. Same-size/mtime-change detection has its own test below.
+	put(t, old, "modified contents")
 	if _, err := service.Execute(context.Background(), plan); !errors.Is(err, fs.ErrStalePlan) {
 		t.Fatalf("stale apply accepted: %v", err)
 	}
-	bytesAt(t, old, "modified")
+	bytesAt(t, old, "modified contents")
 	if _, err := store.Latest(root); !errors.Is(err, history.ErrNoHistory) {
 		t.Fatalf("zero-completion history became undoable: %v", err)
 	}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestNativeRenameNeverReplacesAnExistingDestination(t *testing.T) {
@@ -63,6 +64,37 @@ func TestExecuteDetectsReplacedIdentity(t *testing.T) {
 		t.Fatalf("replacement identity accepted: %v", err)
 	}
 	assertBytes(t, source, "replaced")
+}
+
+func TestExecuteDetectsSameSizeModificationWithChangedTimestamp(t *testing.T) {
+	root := t.TempDir()
+	source, target := filepath.Join(root, "source"), filepath.Join(root, "target")
+	writeBytes(t, source, "original")
+	snapshot, err := Capture(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeBytes(t, source, "modified")
+	// Do not sleep or assume immediate writes receive different timestamps.
+	modified := snapshot.Modified.Add(2 * time.Second)
+	if err := os.Chtimes(source, modified, modified); err != nil {
+		t.Fatal(err)
+	}
+	actual, err := Capture(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if actual.Identity != snapshot.Identity || actual.Size != snapshot.Size || actual.Modified.Equal(snapshot.Modified) {
+		t.Fatal("fixture must change only the source version, not its identity or size")
+	}
+	result, err := Execute(context.Background(), []RenameOp{{OldPath: source, NewPath: target, Source: snapshot}}, nil)
+	if !errors.Is(err, ErrStalePlan) || len(result.Completed) != 0 {
+		t.Fatalf("changed timestamp accepted: %+v, %v", result, err)
+	}
+	assertBytes(t, source, "modified")
+	if _, err := os.Lstat(target); !os.IsNotExist(err) {
+		t.Fatalf("stale execution created a target: %v", err)
+	}
 }
 
 func TestExecuteCancellationAfterCompletedStep(t *testing.T) {

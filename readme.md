@@ -72,7 +72,7 @@ renym undo
 
 - Previews do not change files or create undo history.
 - Occupied targets, including dangling links and batch swaps/chains, are rejected. Native rename calls never overwrite; unsupported filesystems fail instead of using an unsafe fallback.
-- Source identities are rechecked before execution. Edited or replaced files are not renamed or automatically restored by undo.
+- Source identity/mode and regular-file size/modification time are rechecked before execution and undo. Detected changes stop the operation. This is not content hashing: same-size edits that retain the same timestamp can go undetected, including writes within one filesystem timestamp tick.
 - History records completed physical steps, including partial runs. Undo reverses those steps in order, preserves occupied restore targets, and can resume a recorded partial undo.
 - History must be saved before mutation. `--skip-history` is the explicit exception; those changes cannot be undone through Renym.
 - When history is enabled, its directory and ancestors are protected from renaming so a run cannot move its own journal.
