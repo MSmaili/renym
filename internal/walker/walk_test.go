@@ -139,14 +139,19 @@ func TestWalk(t *testing.T) {
 			assert.Nil(t, err)
 
 			for i := range got {
-				rel, _ := filepath.Rel(root, got[i])
+				rel, err := filepath.Rel(root, got[i])
+				assert.Nil(t, err)
 				got[i] = rel
+			}
+			want := make([]string, len(tt.want))
+			for i, path := range tt.want {
+				want[i] = filepath.FromSlash(path)
 			}
 
 			sort.Strings(got)
-			sort.Strings(tt.want)
+			sort.Strings(want)
 
-			assert.SliceEqual(t, got, tt.want)
+			assert.SliceEqual(t, got, want)
 		})
 	}
 }
