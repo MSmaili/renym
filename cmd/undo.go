@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/MSmaili/renym/internal/common"
+	"github.com/MSmaili/renym/internal/app"
 	"github.com/MSmaili/renym/internal/fs"
 	"github.com/MSmaili/renym/internal/history"
 	"github.com/MSmaili/renym/internal/log"
@@ -36,40 +36,29 @@ func runUndo(cmd *cobra.Command, args []string) error {
 
 	dirPath := "."
 
-	entry, err := store.Latest(dirPath)
+	result, err := app.NewService(adapter, store).Undo(cmd.Context(), dirPath, dryRun)
 	if err != nil {
-		return err
-	}
-
-	err = fs.Apply(mapHistoryInReverseToFs(entry), dryRun)
-	if err != nil {
-		return fmt.Errorf("rename operation failed: %w", err)
+		return fmt.Errorf("undo failed after %d completed operation(s): %w", len(result.Execution.Completed), err)
 	}
 
 	separator := strings.Repeat("=", 60)
 	log.Info("%s\n", separator)
-	log.Info("  ✓ UNDO COMPLETED SUCCESSFULLY\n")
+	if dryRun {
+		log.Info("  UNDO PREVIEW - No files were actually renamed\n")
+	} else {
+		log.Info("  ✓ UNDO COMPLETED SUCCESSFULLY\n")
+	}
 	log.Info("%s\n", separator)
 
 	if dryRun {
+		for _, op := range result.Plan.Operations {
+			log.Info("Would rename: %s -> %s\n", op.OldPath, op.NewPath)
+		}
 		log.Info("We would have removed entry from history\n")
 		return nil
 	}
 
-	err = store.Delete(dirPath)
-	if err != nil {
-		return err
-	}
 	log.Info("We removed the entry from history\n")
 
 	return nil
-}
-
-func mapHistoryInReverseToFs(entry *history.Entry) []fs.RenameOp {
-	return common.MapSlice(entry.Operations, func(e history.Operation) fs.RenameOp {
-		return fs.RenameOp{
-			OldPath: e.New,
-			NewPath: e.Old,
-		}
-	})
 }

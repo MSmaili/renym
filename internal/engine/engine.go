@@ -1,10 +1,13 @@
 package engine
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/MSmaili/renym/internal/fs"
 )
 
 type PlanResult struct {
@@ -61,10 +64,18 @@ func (e *Engine) Plan(paths []string) PlanResult {
 	}
 
 	var pending []pendingOp
-	beingRenamed := make(map[string]bool, len(paths))
 
 	for _, path := range paths {
-		newPath := e.computeNewPathPerSelectedMode(path)
+		if err := fs.ValidateName(filepath.Base(path)); err != nil {
+			e.addSkipped(&planResult, path, "unsupported source name for reversible rename")
+			continue
+		}
+		newName := e.computeNewName(path)
+		if err := fs.ValidateName(newName); err != nil {
+			e.addSkipped(&planResult, path, "invalid final name")
+			continue
+		}
+		newPath := filepath.Join(filepath.Dir(path), newName)
 		newPathCompare := compareKey(newPath, caseSensitive)
 
 		if newPath == path {
@@ -78,14 +89,21 @@ func (e *Engine) Plan(paths []string) PlanResult {
 			newPathCompare: newPathCompare,
 		})
 
-		beingRenamed[compareKey(path, caseSensitive)] = true
 	}
 
 	seen := make(map[string]string, len(pending))
 
 	for _, op := range pending {
-		if e.hasDiskCollision(op.newPath, op.newPathCompare, beingRenamed) {
-			e.addSkipped(&planResult, op.oldPath, "target already exists")
+		if e.hasDiskCollision(op.newPath) {
+			reason := "target already exists"
+			if strings.EqualFold(op.oldPath, op.newPath) {
+				oldInfo, oldErr := os.Lstat(op.oldPath)
+				newInfo, newErr := os.Lstat(op.newPath)
+				if oldErr == nil && newErr == nil && os.SameFile(oldInfo, newInfo) {
+					reason = "case-only rename unsupported on this filesystem"
+				}
+			}
+			e.addSkipped(&planResult, op.oldPath, reason)
 			e.addCollision(&planResult, op.newPath, op.oldPath, op.newPath)
 			continue
 		}
@@ -108,18 +126,22 @@ func (e *Engine) Plan(paths []string) PlanResult {
 }
 
 func (e *Engine) computeNewPathPerSelectedMode(path string) string {
-	dir := filepath.Dir(path)
+	return filepath.Join(filepath.Dir(path), e.computeNewName(path))
+}
+
+func (e *Engine) computeNewName(path string) string {
 	oldName := filepath.Base(path)
 
 	ext := filepath.Ext(oldName)
+	if info, err := os.Lstat(path); err == nil && info.IsDir() {
+		ext = ""
+	}
 	nameWithoutExt := strings.TrimSuffix(oldName, ext)
 
 	transformedName := e.adapter.SanitizeName(nameWithoutExt)
 	transformedName = e.mode.Transform(transformedName)
 
-	newName := transformedName + ext
-
-	return filepath.Join(dir, newName)
+	return transformedName + ext
 }
 
 // compareKey returns the comparison key for a path based on case sensitivity
@@ -130,12 +152,12 @@ func compareKey(path string, caseSensitive bool) string {
 	return path
 }
 
-// hasDiskCollision checks if the target path exists on disk and is not being renamed away
-func (e *Engine) hasDiskCollision(newPath, compareKey string, beingRenamed map[string]bool) bool {
-	if _, err := os.Stat(newPath); err == nil {
-		return !beingRenamed[compareKey]
-	}
-	return false
+// hasDiskCollision deliberately rejects every occupied destination, including
+// other batch sources and dangling symlinks. Sequential execution cannot safely
+// perform swaps/chains. Inaccessible destinations are also rejected, not guessed.
+func (e *Engine) hasDiskCollision(newPath string) bool {
+	_, err := os.Lstat(newPath)
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 // addSkipped adds a file to the skipped list

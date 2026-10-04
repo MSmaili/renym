@@ -77,9 +77,8 @@ func TestUnixFSAdapterSanitizeName(t *testing.T) {
 	}
 }
 
-func TestDetectCaseSensitivity(t *testing.T) {
-	result := detectCaseSensitivity()
-	if result != true && result != false {
-		t.Fatal("detectCaseSensitivity returned a non-boolean value")
+func TestUnknownVolumeUsesConservativeCaseComparison(t *testing.T) {
+	if (&UnixFSAdapter{}).IsCaseSensitive() {
+		t.Fatal("unknown volume assumed case-sensitive")
 	}
 }

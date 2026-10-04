@@ -5,16 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/MSmaili/renym/internal/app"
 	"github.com/MSmaili/renym/internal/cli"
-	"github.com/MSmaili/renym/internal/common"
 	"github.com/MSmaili/renym/internal/engine"
 	"github.com/MSmaili/renym/internal/fs"
 	"github.com/MSmaili/renym/internal/history"
 	"github.com/MSmaili/renym/internal/log"
 	"github.com/MSmaili/renym/internal/version"
-	"github.com/MSmaili/renym/internal/walker"
 	"github.com/spf13/cobra"
 )
 
@@ -84,7 +82,7 @@ func validateFlags(cmd *cobra.Command, args []string) error {
 }
 
 func runRename(cmd *cobra.Command, args []string) error {
-	cfg := cli.Config{
+	cfg := app.Request{
 		Path:            path,
 		Mode:            mode,
 		Recursive:       recursive,
@@ -94,69 +92,48 @@ func runRename(cmd *cobra.Command, args []string) error {
 		NoDefaultIgnore: noDefaultIgnore,
 		SkipHistory:     skipHistory,
 		DryRun:          globalCfg.DryRun,
+		Command:         strings.Join(os.Args, " "),
+		Version:         version.Version,
 	}
 
 	adapter := fs.NewAdapter()
 
-	pathsToRename, err := walker.Walk(walker.Config{
-		Path:            cfg.Path,
-		Recursive:       cfg.Recursive,
-		Directories:     cfg.Directories,
-		NoDefaultIgnore: cfg.NoDefaultIgnore,
-		Files:           cfg.Files,
-		Ignore:          cfg.Ignore,
-	})
+	service := app.NewService(adapter, nil)
+	// Constructing the store only resolves its location; planning/preview never
+	// read or write its records. This also lets the service protect journal paths.
+	if !cfg.SkipHistory {
+		store, err := history.NewGlobalStore(adapter)
+		if err != nil && !cfg.DryRun {
+			return fmt.Errorf("history is required: %w", err)
+		}
+		if err == nil {
+			service = app.NewService(adapter, store)
+		}
+	}
+	plan, err := service.Plan(cmd.Context(), cfg)
 	if err != nil {
 		return err
 	}
 
-	renameMode := engine.ModeRegistry[cfg.Mode]
-	engine := engine.NewEngine(renameMode, adapter)
-
-	// Sort paths by depth (deepest first) for safe recursive directory renames
-	// Only needed when renaming directories to avoid parent path invalidation
-	if cfg.Directories {
-		pathsToRename = engine.SortPathsByDepth(pathsToRename)
-	}
-
-	planResult := engine.Plan(pathsToRename)
-
-	if !cfg.SkipHistory {
-		store, err := history.NewGlobalStore(adapter)
-		if err != nil {
-			log.Warn("history disabled: %v\n", err)
-		} else {
-			command := strings.Join(os.Args, " ")
-
-			_, err = store.Save(cfg.Path, history.Entry{
-				Timestamp:  time.Now(),
-				Command:    command,
-				Version:    version.Version,
-				Config:     cfg,
-				Operations: mapEngineOperationToHistory(planResult.Operations),
-				Skipped:    mapEngineSkippedFilesToHistory(planResult.Skipped),
-				Collisions: mapEngineCollosionToHistory(planResult.Collisions),
-			})
-
-			if err != nil {
-				log.Warn("could not save history: %v\n", err)
-			}
-		}
-	}
-
-	if len(planResult.Operations) == 0 {
+	if len(plan.Result.Operations) == 0 {
 		log.Info("\n✓ No files to rename\n")
+		printSkipped(plan.Result.Skipped)
 		return nil
 	}
 
-	log.Debug("Processing %d file(s)...\n", len(planResult.Operations))
+	log.Debug("Processing %d file(s)...\n", len(plan.Result.Operations))
 
-	err = fs.Apply(mapEngineToFS(planResult.Operations), cfg.DryRun)
+	result, err := service.Execute(cmd.Context(), plan)
 	if err != nil {
-		return fmt.Errorf("rename operation failed: %w", err)
+		return fmt.Errorf("rename failed after %d completed operation(s): %w", len(result.Execution.Completed), err)
 	}
 
-	printResults(planResult, cfg.DryRun)
+	if cfg.DryRun {
+		for _, op := range plan.Result.Operations {
+			log.Info("Would rename: %s -> %s\n", op.OldPath, op.NewPath)
+		}
+	}
+	printResults(plan.Result, cfg.DryRun)
 
 	return nil
 }
@@ -199,42 +176,12 @@ func printResults(result engine.PlanResult, dryRun bool) {
 		log.Info("%s\n", thinSeparator)
 	}
 
+	printSkipped(result.Skipped)
 	log.Info("\n")
 }
 
-func mapEngineToFS(ops []engine.RenameOp) []fs.RenameOp {
-	return common.MapSlice(ops, func(e engine.RenameOp) fs.RenameOp {
-		return fs.RenameOp{
-			OldPath: e.OldPath,
-			NewPath: e.NewPath,
-		}
-	})
-}
-
-func mapEngineOperationToHistory(ops []engine.RenameOp) []history.Operation {
-	return common.MapSlice(ops, func(e engine.RenameOp) history.Operation {
-		return history.Operation{
-			Old: e.OldPath,
-			New: e.NewPath,
-		}
-	})
-}
-
-func mapEngineSkippedFilesToHistory(ops []engine.SkippedFile) []history.Skipped {
-	return common.MapSlice(ops, func(e engine.SkippedFile) history.Skipped {
-		return history.Skipped{
-			Path:   e.Path,
-			Reason: e.Reason,
-		}
-	})
-}
-
-func mapEngineCollosionToHistory(ops []engine.Collision) []history.Collision {
-	return common.MapSlice(ops, func(e engine.Collision) history.Collision {
-		return history.Collision{
-			Source1: e.Source1,
-			Source2: e.Source2,
-			Target:  e.Target,
-		}
-	})
+func printSkipped(skipped []engine.SkippedFile) {
+	for _, item := range skipped {
+		log.Info("Skipped: %s (%s)\n", item.Path, item.Reason)
+	}
 }

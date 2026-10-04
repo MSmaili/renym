@@ -1,6 +1,7 @@
 package walker
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -24,6 +25,13 @@ func isFile(path string) (bool, error) {
 }
 
 func Walk(cfg Config) ([]string, error) {
+	return WalkContext(context.Background(), cfg)
+}
+
+func WalkContext(ctx context.Context, cfg Config) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	isFile, err := isFile(cfg.Path)
 	if err != nil {
 		return nil, err
@@ -43,6 +51,9 @@ func Walk(cfg Config) ([]string, error) {
 	}
 
 	err = filepath.WalkDir(cfg.Path, func(path string, d fs.DirEntry, err error) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if err != nil {
 			return err
 		}

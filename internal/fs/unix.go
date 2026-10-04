@@ -3,19 +3,12 @@
 package fs
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-	"sync"
 	"syscall"
 )
 
-type UnixFSAdapter struct {
-	caseSensitive     bool
-	caseSensitiveOnce sync.Once
-}
+type UnixFSAdapter struct{}
 
 func (a *UnixFSAdapter) IsValidName(name string) bool {
 	return name != "" &&
@@ -33,28 +26,10 @@ func (a *UnixFSAdapter) SanitizeName(name string) string {
 }
 
 func (a *UnixFSAdapter) IsCaseSensitive() bool {
-	a.caseSensitiveOnce.Do(func() {
-		a.caseSensitive = detectCaseSensitivity()
-	})
-	return a.caseSensitive
-}
-
-func detectCaseSensitivity() bool {
-	tmpDir := os.TempDir()
-	testFile := filepath.Join(tmpDir, "renym_case_test_UPPER.tmp")
-
-	if err := os.Remove(testFile); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return true
-	}
-
-	if err := os.WriteFile(testFile, []byte{}, 0600); err != nil {
-		return true
-	}
-	defer os.Remove(testFile)
-
-	lowerFile := filepath.Join(tmpDir, "renym_case_test_upper.tmp")
-	_, err := os.Stat(lowerFile)
-	return err != nil // if Stat fails → case sensitive
+	// A temporary-volume probe says nothing about the selected volume. Until
+	// per-volume capabilities exist, compare targets conservatively. Lstat and
+	// native no-replace execution remain authoritative for actual occupancy.
+	return false
 }
 
 func (a *UnixFSAdapter) PathIdentifier(path string) (string, error) {

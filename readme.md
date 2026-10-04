@@ -68,6 +68,19 @@ renym -m pascal -p ./src -r
 renym undo
 ```
 
+## Rename and undo safety
+
+- Previews do not change files or create undo history.
+- Occupied targets, including dangling links and batch swaps/chains, are rejected. Native rename calls never overwrite; unsupported filesystems fail instead of using an unsafe fallback.
+- Source identities are rechecked before execution. Edited or replaced files are not renamed or automatically restored by undo.
+- History records completed physical steps, including partial runs. Undo reverses those steps in order, preserves occupied restore targets, and can resume a recorded partial undo.
+- History must be saved before mutation. `--skip-history` is the explicit exception; those changes cannot be undone through Renym.
+- When history is enabled, its directory and ancestors are protected from renaming so a run cannot move its own journal.
+- Older history files contain unverified plans and cannot be automatically undone by this version. They are not migrated. Interrupted or failed checkpoints also require manual reconciliation rather than blind replay.
+- Case-only renames are currently skipped when the destination aliases the source. Batch target comparison is conservative when volume case behavior is unknown.
+
+Use trusted local directories and one Renym operation at a time. This is not an atomic batch transaction or a hostile-filesystem sandbox. Cross-process locking and full crash/power-loss recovery are not implemented.
+
 ## Modes
 
 | Mode     | Example     |

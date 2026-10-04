@@ -193,12 +193,12 @@ func TestPlan(t *testing.T) {
 				filepath.Join(tempDir, "foo.txt"),
 				filepath.Join(tempDir, "bar.txt"),
 			},
-			expectedOps: []RenameOp{
-				{OldPath: filepath.Join(tempDir, "foo.txt"), NewPath: filepath.Join(tempDir, "bar.txt")},
-				{OldPath: filepath.Join(tempDir, "bar.txt"), NewPath: filepath.Join(tempDir, "foo.txt")},
+			expectedOps: []RenameOp{},
+			expectedSkipped: []SkippedFile{
+				{Path: filepath.Join(tempDir, "foo.txt"), Reason: "target already exists"},
+				{Path: filepath.Join(tempDir, "bar.txt"), Reason: "target already exists"},
 			},
-			expectedSkipped:   []SkippedFile{},
-			expectedCollCount: 0,
+			expectedCollCount: 2,
 		},
 		{
 			name:          "multiple_files_to_same_target",
@@ -341,8 +341,8 @@ func TestComputeNewPath(t *testing.T) {
 			adapter := &mockAdapter{caseSensitive: true, sanitize: tt.sanitize}
 			engine := NewEngine(tt.mode, adapter)
 
-			result := engine.computeNewPathPerSelectedMode(tt.input)
-			assert.Equal(t, result, tt.expected)
+			result := engine.computeNewPathPerSelectedMode(filepath.FromSlash(tt.input))
+			assert.Equal(t, result, filepath.FromSlash(tt.expected))
 		})
 	}
 }
@@ -415,7 +415,7 @@ func TestHasDiskCollision(t *testing.T) {
 				filepath.Join(tempDir, "renamed.txt"): true,
 			},
 			caseSensitive: true,
-			expected:      false,
+			expected:      true,
 		},
 		{
 			name:          "file_does_not_exist",
@@ -440,8 +440,7 @@ func TestHasDiskCollision(t *testing.T) {
 			adapter := &mockAdapter{caseSensitive: tt.caseSensitive}
 			engine := NewEngine(nil, adapter)
 
-			compareKey := compareKey(tt.newPath, tt.caseSensitive)
-			result := engine.hasDiskCollision(tt.newPath, compareKey, tt.beingRenamed)
+			result := engine.hasDiskCollision(tt.newPath)
 			assert.Equal(t, result, tt.expected)
 		})
 	}
@@ -477,7 +476,7 @@ func TestPathDepth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := pathDepth(tt.path)
+			result := pathDepth(filepath.FromSlash(tt.path))
 			assert.Equal(t, result, tt.expected)
 		})
 	}
@@ -548,11 +547,15 @@ func TestSortPathsByDepth(t *testing.T) {
 			mode := mockMode{transform: func(s string) string { return "upper" }}
 			adapter := &mockAdapter{caseSensitive: true}
 			engine := NewEngine(mode, adapter)
-			result := engine.SortPathsByDepth(tt.input)
+			input := make([]string, len(tt.input))
+			for i, path := range tt.input {
+				input[i] = filepath.FromSlash(path)
+			}
+			result := engine.SortPathsByDepth(input)
 			assert.Len(t, result, len(tt.expected))
 			for i, expected := range tt.expected {
 				if i < len(result) {
-					assert.Equal(t, result[i], expected)
+					assert.Equal(t, result[i], filepath.FromSlash(expected))
 				}
 			}
 		})
