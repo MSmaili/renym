@@ -49,6 +49,15 @@ func NewEngine(mode RenameMode, adapter FileSystemAdapter) *Engine {
 }
 
 func (e *Engine) Plan(paths []string) PlanResult {
+	return e.PlanNames(paths, func(path string) (string, string) {
+		return e.computeNewName(path), ""
+	})
+}
+
+// PlanNames applies the existing validation/conflict policy to generated full
+// basenames. A reason skips an item; the generator cannot choose a directory or
+// bypass final-name validation. Input order is the conflict winner order.
+func (e *Engine) PlanNames(paths []string, generate func(string) (name, reason string)) PlanResult {
 	planResult := PlanResult{
 		Operations: []RenameOp{},
 		Skipped:    []SkippedFile{},
@@ -70,7 +79,11 @@ func (e *Engine) Plan(paths []string) PlanResult {
 			e.addSkipped(&planResult, path, "unsupported source name for reversible rename")
 			continue
 		}
-		newName := e.computeNewName(path)
+		newName, reason := generate(path)
+		if reason != "" {
+			e.addSkipped(&planResult, path, reason)
+			continue
+		}
 		if err := fs.ValidateName(newName); err != nil {
 			e.addSkipped(&planResult, path, "invalid final name")
 			continue
@@ -130,18 +143,19 @@ func (e *Engine) computeNewPathPerSelectedMode(path string) string {
 }
 
 func (e *Engine) computeNewName(path string) string {
-	oldName := filepath.Base(path)
+	info, err := os.Lstat(path)
+	return ModeBasename(filepath.Base(path), err == nil && info.IsDir(), e.mode, e.adapter)
+}
 
-	ext := filepath.Ext(oldName)
-	if info, err := os.Lstat(path); err == nil && info.IsDir() {
+// ModeBasename preserves the existing mode/sanitization/extension behavior
+// without reading the filesystem. Directory kinds come from original snapshots.
+func ModeBasename(name string, directory bool, mode RenameMode, adapter FileSystemAdapter) string {
+	ext := filepath.Ext(name)
+	if directory {
 		ext = ""
 	}
-	nameWithoutExt := strings.TrimSuffix(oldName, ext)
-
-	transformedName := e.adapter.SanitizeName(nameWithoutExt)
-	transformedName = e.mode.Transform(transformedName)
-
-	return transformedName + ext
+	stem := strings.TrimSuffix(name, ext)
+	return mode.Transform(adapter.SanitizeName(stem)) + ext
 }
 
 // compareKey returns the comparison key for a path based on case sensitivity

@@ -68,6 +68,16 @@ renym -m pascal -p ./src -r
 renym undo
 ```
 
+## Reusable TOML presets
+
+```bash
+renym template validate ./examples/templates/screenshots.toml
+renym --template ./examples/templates/screenshots.toml -p ./inbox --dry-run
+renym --template ./examples/templates/screenshots.toml -p ./inbox
+```
+
+Use ordered rules with existing rename modes. [Schema, matching, and CLI overrides](docs/templates.md). `--template` and `--mode` are exclusive. YAML, filename expressions, and named lookup are not available yet.
+
 ## Rename and undo safety
 
 - Previews do not change files or create undo history.

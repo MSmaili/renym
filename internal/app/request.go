@@ -3,30 +3,54 @@ package app
 import (
 	"github.com/MSmaili/renym/internal/engine"
 	"github.com/MSmaili/renym/internal/fs"
+	"github.com/MSmaili/renym/internal/templates"
 )
 
-// Request describes the existing one-shot mode workflow, independent of Cobra.
+// Request describes a one-shot mode or explicit preset workflow, independent of Cobra.
 type Request struct {
-	Path            string
-	Mode            string
-	Recursive       bool
-	Directories     bool
-	Files           bool
-	Ignore          []string
-	NoDefaultIgnore bool
-	DryRun          bool
-	SkipHistory     bool
-	Command         string
-	Version         string
+	Path               string
+	Mode               string
+	TemplatePath       string
+	SelectionOverrides SelectionOverrides
+	Recursive          bool
+	Directories        bool
+	Files              bool
+	Ignore             []string
+	NoDefaultIgnore    bool
+	DryRun             bool
+	SkipHistory        bool
+	Command            string
+	Version            string
+}
+
+// Presence, not zero values, determines whether an adapter overrides a preset.
+// --directories=false means files; --dirs-only=false restores ordinary selection.
+type SelectionOverrides struct {
+	Kind            *string   `json:"kind,omitempty"`
+	Recursive       *bool     `json:"recursive,omitempty"`
+	Ignore          *[]string `json:"ignore,omitempty"`
+	NoDefaultIgnore *bool     `json:"no_default_ignore,omitempty"`
+}
+
+type RuleMatch struct {
+	Path   string `json:"path"`
+	RuleID string `json:"rule_id"`
+	Mode   string `json:"mode"`
 }
 
 // Plan keeps executable snapshots private; presentation receives a separate
 // engine result. Later entry points must obtain plans from this service.
 type Plan struct {
-	Result     engine.PlanResult
-	operations []fs.RenameOp
-	root       string
-	request    Request
+	Result       engine.PlanResult
+	TemplatePath string
+	TemplateName string
+	Selection    templates.Selection
+	Overrides    []string
+	Matches      []RuleMatch
+	operations   []fs.RenameOp
+	root         string
+	request      Request
+	templateSpec *templates.Spec
 }
 
 type Result struct {

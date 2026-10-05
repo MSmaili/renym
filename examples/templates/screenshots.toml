@@ -1,0 +1,14 @@
+version = 1
+name = "Screenshot names"
+
+[selection]
+kind = "files"
+recursive = false
+
+[[rules]]
+id = "screenshots"
+[rules.match]
+glob = ["Screenshot*", "Screen Shot*"]
+extensions = [".png"]
+[rules.rename]
+mode = "snake"

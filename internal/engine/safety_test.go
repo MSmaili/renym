@@ -68,3 +68,16 @@ func TestCaseOnlyAliasHasAnExplicitDiagnostic(t *testing.T) {
 		t.Fatalf("alias diagnostic missing: %+v", plan)
 	}
 }
+
+func TestGeneratedNamesCannotBypassBasenameValidation(t *testing.T) {
+	root := t.TempDir()
+	source := filepath.Join(root, "source")
+	if err := os.WriteFile(source, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine(nil, &mockAdapter{caseSensitive: true})
+	plan := e.PlanNames([]string{source}, func(string) (string, string) { return "../escape", "" })
+	if len(plan.Operations) != 0 || len(plan.Skipped) != 1 || plan.Skipped[0].Reason != "invalid final name" {
+		t.Fatalf("generated basename escaped planner: %+v", plan)
+	}
+}

@@ -3,6 +3,7 @@ module github.com/MSmaili/renym
 go 1.25.3
 
 require (
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/spf13/cobra v1.10.1
 	golang.org/x/sys v0.39.0
 )

@@ -5,13 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/MSmaili/renym/internal/engine"
 	"github.com/MSmaili/renym/internal/fs"
 	"github.com/MSmaili/renym/internal/history"
+	"github.com/MSmaili/renym/internal/templates"
 	"github.com/MSmaili/renym/internal/walker"
 )
 
@@ -31,12 +34,16 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	if err := ctx.Err(); err != nil {
 		return Plan{}, err
 	}
-	mode, ok := engine.ModeRegistry[req.Mode]
-	if !ok {
-		return Plan{}, fmt.Errorf("unknown rename mode %q", req.Mode)
+	req, compiled, overrides, err := prepareRequest(req)
+	if err != nil {
+		return Plan{}, err
+	}
+	matchIgnore := filepath.Match
+	if compiled != nil {
+		matchIgnore = path.Match
 	}
 	for _, pattern := range req.Ignore {
-		if _, err := filepath.Match(pattern, ""); err != nil {
+		if _, err := matchIgnore(pattern, ""); err != nil {
 			return Plan{}, fmt.Errorf("invalid ignore pattern %q: %w", pattern, err)
 		}
 	}
@@ -59,39 +66,86 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	paths, err := walker.WalkContext(ctx, walker.Config{
 		Path: path, Recursive: req.Recursive, Directories: req.Directories, Files: req.Files,
 		Ignore: req.Ignore, NoDefaultIgnore: req.NoDefaultIgnore,
+		PortableGlobs: compiled != nil,
 	})
 	if err != nil {
 		return Plan{}, err
 	}
-	e := engine.NewEngine(mode, s.adapter)
+	e := engine.NewEngine(engine.ModeRegistry[req.Mode], s.adapter)
 	var protected []engine.SkippedFile
+	snapshots := make(map[string]*fs.Snapshot, len(paths))
 	filtered := paths[:0]
 	for _, path := range paths {
+		if err := ctx.Err(); err != nil {
+			return Plan{}, err
+		}
 		if s.protectsHistory(path) {
 			protected = append(protected, engine.SkippedFile{Path: path, Reason: "protected history directory"})
 			continue
 		}
+		if protectsTemplate(path, req.TemplatePath) {
+			protected = append(protected, engine.SkippedFile{Path: path, Reason: "protected template file or ancestor"})
+			continue
+		}
+		snapshot, err := fs.Capture(path)
+		if err != nil {
+			protected = append(protected, engine.SkippedFile{Path: path, Reason: err.Error()})
+			continue
+		}
+		snapshots[path] = snapshot
 		filtered = append(filtered, path)
 	}
 	paths = filtered
+	// Rule evaluation order is lexical and independent of physical execution
+	// depth. Matching always uses original names/kinds, never proposed targets.
+	sort.SliceStable(paths, func(i, j int) bool { return filepath.ToSlash(paths[i]) < filepath.ToSlash(paths[j]) })
+	plan := Plan{root: root, request: req, Overrides: overrides}
+	names, reasons := make(map[string]string, len(paths)), make(map[string]string)
+	for _, path := range paths {
+		if err := ctx.Err(); err != nil {
+			return Plan{}, err
+		}
+		mode := engine.ModeRegistry[req.Mode]
+		if compiled != nil {
+			decision, matched := compiled.Match(filepath.Base(path), snapshots[path].Mode.IsDir())
+			if !matched {
+				reasons[path] = "no template rule matched"
+				continue
+			}
+			mode = engine.ModeRegistry[decision.Mode]
+			plan.Matches = append(plan.Matches, RuleMatch{Path: path, RuleID: decision.RuleID, Mode: decision.Mode})
+		}
+		names[path] = engine.ModeBasename(filepath.Base(path), snapshots[path].Mode.IsDir(), mode, s.adapter)
+	}
 	if req.Directories {
 		paths = e.SortPathsByDepth(paths)
 	}
-	result := e.Plan(paths)
+	result := e.PlanNames(paths, func(path string) (string, string) { return names[path], reasons[path] })
+	if err := ctx.Err(); err != nil {
+		return Plan{}, err
+	}
 	result.Skipped = append(result.Skipped, protected...)
-	plan := Plan{Result: result, root: root, request: req}
-	plan.Result.Operations = nil
+	plan.Result = result
+	if compiled != nil {
+		spec := compiled.Snapshot()
+		plan.templateSpec = &spec
+		plan.TemplatePath, plan.TemplateName = req.TemplatePath, spec.Name
+		kind := "files"
+		if req.Directories {
+			kind = "directories"
+			if req.Files {
+				kind = "both"
+			}
+		}
+		plan.Selection = templates.Selection{Kind: kind, Recursive: req.Recursive, Ignore: append([]string(nil), req.Ignore...), NoDefaultIgnore: req.NoDefaultIgnore}
+	}
+	plan.Result.Operations = append([]engine.RenameOp(nil), result.Operations...)
 	for _, op := range result.Operations {
 		if err := ctx.Err(); err != nil {
 			return Plan{}, err
 		}
-		snapshot, err := fs.Capture(op.OldPath)
-		if err != nil {
-			plan.Result.Skipped = append(plan.Result.Skipped, engine.SkippedFile{Path: op.OldPath, Reason: err.Error()})
-			continue
-		}
+		snapshot := snapshots[op.OldPath]
 		plan.operations = append(plan.operations, fs.RenameOp{ID: len(plan.operations) + 1, OldPath: op.OldPath, NewPath: op.NewPath, Source: snapshot})
-		plan.Result.Operations = append(plan.Result.Operations, op)
 	}
 	return plan, nil
 }
@@ -139,6 +193,12 @@ func (s *Service) Execute(ctx context.Context, plan Plan) (Result, error) {
 		SchemaVersion: history.SchemaVersion, State: history.Pending, Timestamp: time.Now().UTC(),
 		Command: plan.request.Command, Version: plan.request.Version, Config: plan.request,
 		Intent: historyOps(plan.operations), Skipped: historySkips(plan.Result.Skipped), Collisions: historyCollisions(plan.Result.Collisions),
+	}
+	if plan.templateSpec != nil {
+		entry.Config = struct {
+			Request
+			TemplateSpec *templates.Spec `json:"template_spec"`
+		}{plan.request, plan.templateSpec}
 	}
 	// Keep manual run ordering stable even if the wall clock moves backwards.
 	if latest != nil && !entry.Timestamp.After(latest.Timestamp) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -14,6 +15,7 @@ type Config struct {
 	Directories     bool
 	Ignore          []string
 	NoDefaultIgnore bool
+	PortableGlobs   bool
 }
 
 func isFile(path string) (bool, error) {
@@ -38,6 +40,19 @@ func WalkContext(ctx context.Context, cfg Config) ([]string, error) {
 	}
 	if isFile {
 		if cfg.Files {
+			// Existing mode commands keep their explicit-file behavior. Presets
+			// apply portable basename filters to a single file as well as batches.
+			if cfg.PortableGlobs {
+				patterns := cfg.Ignore
+				if !cfg.NoDefaultIgnore {
+					patterns = append(append([]string(nil), DefaultIgnorePatterns...), cfg.Ignore...)
+				}
+				for _, pattern := range patterns {
+					if matched, _ := path.Match(pattern, filepath.Base(cfg.Path)); matched {
+						return []string{}, nil
+					}
+				}
+			}
 			return []string{cfg.Path}, nil
 		}
 		return []string{}, nil
@@ -47,7 +62,11 @@ func WalkContext(ctx context.Context, cfg Config) ([]string, error) {
 
 	ignorePatterns := cfg.Ignore
 	if !cfg.NoDefaultIgnore {
-		ignorePatterns = append(DefaultIgnorePatterns, cfg.Ignore...)
+		ignorePatterns = append(append([]string(nil), DefaultIgnorePatterns...), cfg.Ignore...)
+	}
+	match := filepath.Match
+	if cfg.PortableGlobs {
+		match = path.Match
 	}
 
 	err = filepath.WalkDir(cfg.Path, func(path string, d fs.DirEntry, err error) error {
@@ -64,7 +83,7 @@ func WalkContext(ctx context.Context, cfg Config) ([]string, error) {
 
 		name := d.Name()
 		for _, pattern := range ignorePatterns {
-			matched, err := filepath.Match(pattern, name)
+			matched, err := match(pattern, name)
 			if err != nil {
 				continue
 			}

@@ -18,6 +18,7 @@ import (
 
 var (
 	mode            string
+	templatePath    string
 	path            string
 	recursive       bool
 	directories     bool
@@ -51,6 +52,7 @@ func init() {
 
 	// Modes  flags
 	rootCmd.Flags().StringVarP(&mode, "mode", "m", "", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
+	rootCmd.Flags().StringVar(&templatePath, "template", "", "Explicit TOML rename preset (exclusive with --mode)")
 	rootCmd.RegisterFlagCompletionFunc("mode", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -74,6 +76,16 @@ func validateFlags(cmd *cobra.Command, args []string) error {
 		log.Print("renym version %s\n", version.Version)
 		os.Exit(0)
 	}
+	if cmd.Flags().Changed("template") {
+		if cmd.Flags().Changed("mode") {
+			return fmt.Errorf("%w: --mode and --template cannot be used together", cli.ErrConflictingFlags)
+		}
+		if templatePath == "" {
+			return fmt.Errorf("--template requires an explicit TOML file path")
+		}
+		// The application validates the preset before it discovers the input path.
+		return nil
+	}
 	if !cmd.Flags().Changed("mode") {
 		_ = cmd.Help()
 		os.Exit(0)
@@ -85,6 +97,7 @@ func runRename(cmd *cobra.Command, args []string) error {
 	cfg := app.Request{
 		Path:            path,
 		Mode:            mode,
+		TemplatePath:    templatePath,
 		Recursive:       recursive,
 		Directories:     directories || dirsOnly,
 		Files:           !dirsOnly,
@@ -94,6 +107,9 @@ func runRename(cmd *cobra.Command, args []string) error {
 		DryRun:          globalCfg.DryRun,
 		Command:         strings.Join(os.Args, " "),
 		Version:         version.Version,
+	}
+	if templatePath != "" {
+		cfg.SelectionOverrides = templateSelectionOverrides(cmd)
 	}
 
 	adapter := fs.NewAdapter()
@@ -113,6 +129,19 @@ func runRename(cmd *cobra.Command, args []string) error {
 	plan, err := service.Plan(cmd.Context(), cfg)
 	if err != nil {
 		return err
+	}
+	if plan.TemplatePath != "" {
+		log.Info("Template: %s", plan.TemplatePath)
+		if plan.TemplateName != "" {
+			log.Info(" (%s)", plan.TemplateName)
+		}
+		log.Info("\nSelection: kind=%s recursive=%t ignore=%v no_default_ignore=%t\n", plan.Selection.Kind, plan.Selection.Recursive, plan.Selection.Ignore, plan.Selection.NoDefaultIgnore)
+		if len(plan.Overrides) > 0 {
+			log.Info("CLI overrides: %s\n", strings.Join(plan.Overrides, ", "))
+		}
+		for _, match := range plan.Matches {
+			log.Debug("Rule %s (%s): %s\n", match.RuleID, match.Mode, match.Path)
+		}
 	}
 
 	if len(plan.Result.Operations) == 0 {
@@ -136,6 +165,32 @@ func runRename(cmd *cobra.Command, args []string) error {
 	printResults(plan.Result, cfg.DryRun)
 
 	return nil
+}
+
+func templateSelectionOverrides(cmd *cobra.Command) app.SelectionOverrides {
+	var overrides app.SelectionOverrides
+	if cmd.Flags().Changed("directories") || cmd.Flags().Changed("dirs-only") {
+		kind := "files"
+		if dirsOnly {
+			kind = "directories"
+		} else if directories {
+			kind = "both"
+		}
+		overrides.Kind = &kind
+	}
+	if cmd.Flags().Changed("recursive") {
+		value := recursive
+		overrides.Recursive = &value
+	}
+	if cmd.Flags().Changed("ignore") {
+		value := append([]string(nil), ignore...)
+		overrides.Ignore = &value
+	}
+	if cmd.Flags().Changed("no-default-ignore") {
+		value := noDefaultIgnore
+		overrides.NoDefaultIgnore = &value
+	}
+	return overrides
 }
 
 func printResults(result engine.PlanResult, dryRun bool) {
