@@ -13,11 +13,16 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
-// Load accepts explicit TOML files only. It never searches project directories
-// or config storage, creates directories, or runs any template actions.
-func Load(filename string) (*Compiled, error) {
-	if !strings.EqualFold(filepath.Ext(filename), ".toml") {
-		return nil, fmt.Errorf("template %q: only explicit .toml files are supported; YAML and named lookup are not available yet", filename)
+// Load resolves an explicit path or configured name, reads a bounded regular
+// file, and compiles it. It never creates directories or runs template actions.
+func Load(reference string) (*Compiled, error) {
+	filename, err := Resolve(reference)
+	if err != nil {
+		return nil, fmt.Errorf("template %q: %w", reference, err)
+	}
+	format := strings.ToLower(filepath.Ext(filename))
+	if !supportedExtension(format) {
+		return nil, fmt.Errorf("template %q: supported formats are .toml, .yaml, and .yml", filename)
 	}
 	// Check ordinary special files before opening: opening a FIFO for reading
 	// could otherwise block indefinitely. Hostile path swaps are out of scope.
@@ -47,10 +52,16 @@ func Load(filename string) (*Compiled, error) {
 	if err != nil {
 		return nil, fmt.Errorf("template %q: %w", filename, err)
 	}
-	compiled, err := Parse(data)
+	var compiled *Compiled
+	if format == ".toml" {
+		compiled, err = Parse(data)
+	} else {
+		compiled, err = ParseYAML(data)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("template %q: %w", filename, err)
 	}
+	compiled.sourcePath = filename
 	return compiled, nil
 }
 

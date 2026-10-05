@@ -27,10 +27,7 @@ func prepareRequest(req Request) (Request, *templates.Compiled, []string, error)
 	if err != nil {
 		return req, nil, nil, err
 	}
-	req.TemplatePath, err = filepath.Abs(req.TemplatePath)
-	if err != nil {
-		return req, nil, nil, err
-	}
+	req.TemplatePath = compiled.SourcePath()
 	selection := compiled.Selection()
 	var overrides []string
 	if req.SelectionOverrides.Kind != nil {

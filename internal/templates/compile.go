@@ -16,9 +16,14 @@ var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 // Compiled contains no mutable state or callable user code. All patterns and
 // modes are validated once; matching uses the standard library's path.Match.
 type Compiled struct {
-	spec     Spec
-	programs []*render.Program
+	spec       Spec
+	programs   []*render.Program
+	sourcePath string
 }
+
+// SourcePath is the resolved origin of a loaded template; Parse-only results
+// have no origin. Application plans protect and journal this actual path.
+func (c *Compiled) SourcePath() string { return c.sourcePath }
 
 type Decision struct {
 	RuleID  string

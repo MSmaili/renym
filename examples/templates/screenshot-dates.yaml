@@ -1,0 +1,14 @@
+version: 1
+name: Timestamped screenshots
+
+selection:
+  kind: files
+
+rules:
+  - id: screenshots
+    match:
+      glob: ["Screenshot*", "Screen Shot*"]
+      extensions: [".png"]
+    rename:
+      # UTC snapshot modification time; indices restart for each plan.
+      filename: 'shot_${file.modified | date("timestamp")}_${index | pad(3)}${file.ext | lower}'

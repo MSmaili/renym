@@ -26,31 +26,31 @@ type Selection struct {
 }
 
 type Rule struct {
-	ID     string `toml:"id" json:"id"`
-	Match  Match  `toml:"match" json:"match"`
-	Rename Rename `toml:"rename" json:"rename"`
+	ID     string `toml:"id" yaml:"id" json:"id"`
+	Match  Match  `toml:"match" yaml:"match" json:"match"`
+	Rename Rename `toml:"rename" yaml:"rename" json:"rename"`
 }
 
 type Match struct {
-	Glob       []string `toml:"glob" json:"glob,omitempty"`
-	Extensions []string `toml:"extensions" json:"extensions,omitempty"`
+	Glob       []string `toml:"glob" yaml:"glob" json:"glob,omitempty"`
+	Extensions []string `toml:"extensions" yaml:"extensions" json:"extensions,omitempty"`
 }
 
 type Rename struct {
-	Mode     string  `toml:"mode" json:"mode,omitempty"`
-	Filename *string `toml:"filename" json:"filename,omitempty"`
+	Mode     string  `toml:"mode" yaml:"mode" json:"mode,omitempty"`
+	Filename *string `toml:"filename" yaml:"filename" json:"filename,omitempty"`
 }
 
 // Pointer fields in the wire representation distinguish omission from explicit
 // empty values. Future adapters normalize into the same immutable Spec.
 type document struct {
-	Version   int     `toml:"version"`
-	Name      *string `toml:"name"`
+	Version   int     `toml:"version" yaml:"version"`
+	Name      *string `toml:"name" yaml:"name"`
 	Selection struct {
-		Kind            *string  `toml:"kind"`
-		Recursive       bool     `toml:"recursive"`
-		Ignore          []string `toml:"ignore"`
-		NoDefaultIgnore bool     `toml:"no_default_ignore"`
-	} `toml:"selection"`
-	Rules []Rule `toml:"rules"`
+		Kind            *string  `toml:"kind" yaml:"kind"`
+		Recursive       bool     `toml:"recursive" yaml:"recursive"`
+		Ignore          []string `toml:"ignore" yaml:"ignore"`
+		NoDefaultIgnore bool     `toml:"no_default_ignore" yaml:"no_default_ignore"`
+	} `toml:"selection" yaml:"selection"`
+	Rules []Rule `toml:"rules" yaml:"rules"`
 }

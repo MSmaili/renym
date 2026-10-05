@@ -52,7 +52,7 @@ func init() {
 
 	// Modes  flags
 	rootCmd.Flags().StringVarP(&mode, "mode", "m", "", "Rename mode: upper, lower, pascal, camel, snake, kebab, title")
-	rootCmd.Flags().StringVar(&templatePath, "template", "", "Explicit TOML rename preset (exclusive with --mode)")
+	rootCmd.Flags().StringVar(&templatePath, "template", "", "TOML/YAML template name or file path (exclusive with --mode)")
 	rootCmd.RegisterFlagCompletionFunc("mode", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		return []string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -81,7 +81,7 @@ func validateFlags(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("%w: --mode and --template cannot be used together", cli.ErrConflictingFlags)
 		}
 		if templatePath == "" {
-			return fmt.Errorf("--template requires an explicit TOML file path")
+			return fmt.Errorf("--template requires a template name or file path")
 		}
 		// The application validates the preset before it discovers the input path.
 		return nil

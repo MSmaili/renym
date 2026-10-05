@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/MSmaili/renym/internal/cli"
 	"github.com/MSmaili/renym/internal/log"
+	"github.com/MSmaili/renym/internal/templates"
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +35,74 @@ func presetFlagCommand(t *testing.T) *cobra.Command {
 	cmd.Flags().BoolVar(&noDefaultIgnore, "no-default-ignore", false, "")
 	cmd.SetContext(context.Background())
 	return cmd
+}
+
+func TestTemplateListAndValidateNames(t *testing.T) {
+	base := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", base)
+	t.Setenv("APPDATA", base)
+	dir, err := templates.Directory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+	var output bytes.Buffer
+	log.SetOutput(&output)
+	t.Cleanup(func() { log.SetOutput(os.Stdout) })
+	if err := listTemplateCmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), dir) || !strings.Contains(output.String(), "No templates") {
+		t.Fatalf("missing empty catalog origin: %s", output.String())
+	}
+	if _, err := os.Stat(filepath.Join(base, "renym")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("listing created storage: %v", err)
+	}
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "shots.yaml")
+	data := "version: 1\nrules:\n  - id: all\n    rename: {mode: snake}\n"
+	if err := os.WriteFile(path, []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	output.Reset()
+	if err := validateTemplateCmd.RunE(cmd, []string{"shots"}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(output.String(), path) {
+		t.Fatalf("validate hides resolved origin: %s", output.String())
+	}
+	if err := os.WriteFile(filepath.Join(dir, "shots.toml"), []byte("invalid"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	output.Reset()
+	if err := listTemplateCmd.RunE(cmd, nil); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(output.String(), "ambiguous") != 2 || !strings.Contains(output.String(), path) {
+		t.Fatalf("list must show both origins and ambiguity: %s", output.String())
+	}
+	if err := validateTemplateCmd.RunE(cmd, []string{"shots"}); !errors.Is(err, templates.ErrAmbiguous) {
+		t.Fatalf("ambiguous name validated: %v", err)
+	}
+	if err := validateTemplateCmd.RunE(cmd, []string{path}); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(filepath.Join(base, "renym"))
+	if err != nil || len(entries) != 1 || entries[0].Name() != "templates" {
+		t.Fatalf("inspection created state: %v %v", entries, err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	cmd.SetContext(ctx)
+	if err := listTemplateCmd.RunE(cmd, nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("list ignored cancellation: %v", err)
+	}
+	if err := validateTemplateCmd.RunE(cmd, []string{path}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("validate ignored cancellation: %v", err)
+	}
 }
 
 func TestTemplateAndModeFlagsAreExclusiveEvenWithEmptyMode(t *testing.T) {

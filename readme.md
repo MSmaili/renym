@@ -68,15 +68,21 @@ renym -m pascal -p ./src -r
 renym undo
 ```
 
-## Reusable TOML presets
+## Reusable TOML/YAML templates
 
 ```bash
 renym template validate ./examples/templates/screenshots.toml
 renym --template ./examples/templates/screenshots.toml -p ./inbox --dry-run
 renym --template ./examples/templates/screenshots.toml -p ./inbox
+# Equivalent YAML:
+renym template validate ./examples/templates/screenshots.yaml
+renym --template ./examples/templates/screenshots.yaml -p ./inbox --dry-run
+# After saving screenshots.toml or screenshots.yaml in your template directory:
+renym template list
+renym --template screenshots -p ./inbox --dry-run
 ```
 
-Use ordered rules with existing rename modes or [bounded filename patterns](docs/filename-patterns.md). [Schema, matching, and CLI overrides](docs/templates.md). `--template` and `--mode` are exclusive. YAML and named lookup are not available yet.
+Use ordered rules with existing rename modes or [bounded filename patterns](docs/filename-patterns.md). [Schema, storage, matching, and CLI overrides](docs/templates.md). `--template` and `--mode` are exclusive. Named templates live in `~/.config/renym/templates` on macOS/Linux (absolute `XDG_CONFIG_HOME` overrides), or `%APPDATA%\renym\templates` on Windows. Moving, watching, and AI actions are not implemented yet.
 
 ## Rename and undo safety
 

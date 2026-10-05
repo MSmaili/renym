@@ -6,11 +6,11 @@ import (
 	"github.com/MSmaili/renym/internal/templates"
 )
 
-// Request describes a one-shot mode or explicit preset workflow, independent of Cobra.
+// Request describes a one-shot mode or template workflow, independent of Cobra.
 type Request struct {
 	Path               string
 	Mode               string
-	TemplatePath       string
+	TemplatePath       string // explicit path or configured name; plans freeze the resolved path
 	SelectionOverrides SelectionOverrides
 	Recursive          bool
 	Directories        bool

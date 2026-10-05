@@ -1,6 +1,6 @@
-# TOML rename presets
+# TOML/YAML rename templates
 
-Reuse existing rename modes through an explicitly selected TOML file:
+Reuse existing rename modes through a selected TOML/YAML file or configured name:
 
 ```sh
 renym template validate ./examples/templates/screenshots.toml
@@ -12,7 +12,24 @@ renym undo --dry-run
 renym undo
 ```
 
-TOML supports existing mode presets and [bounded filename patterns](filename-patterns.md). YAML, named lookup, `template list`, moving, watching, and AI actions are **not supported yet**. Unsupported fields are errors, not ignored behavior. `--template` and `--mode` are exclusive, even when one is explicitly empty. No preset is automatically discovered or executed from a project directory.
+Both formats support existing mode presets and [bounded filename patterns](filename-patterns.md), using the same schema, compiler, planner, and executor. Moving, watching, and AI actions are **not supported yet**. Unsupported fields are errors, not ignored behavior. `--template` and `--mode` are exclusive, even when one is explicitly empty. No preset is automatically discovered or executed from a project directory.
+
+## Names and storage
+
+Store editable files in:
+
+- **macOS/Linux:** `$XDG_CONFIG_HOME/renym/templates` when the override is absolute; otherwise `~/.config/renym/templates`. Unset, empty, and relative XDG values use the home fallback. macOS does not use Application Support for templates.
+- **Windows:** `os.UserConfigDir()/renym/templates`, normally `%APPDATA%\renym\templates`. XDG does not override this.
+
+```sh
+renym template list
+renym template validate screenshots
+renym --template screenshots -p ./inbox --dry-run
+```
+
+A bare name is the filename without `.toml`, `.yaml`, or `.yml`, not the optional display label. Names match exactly (case-sensitive), start with an ASCII letter/digit, and contain at most 64 bytes of letters, digits, `_`, `-`, or `.`. A name cannot end in a supported format suffix: those references always mean explicit paths. Suffix matching itself is case-insensitive. Any reference containing `/` or `\` also means an explicit path, relative to the working directory unless absolute. Use `./` to select an explicit path with an unsupported suffix and receive a format error. Renym does not expand `~` or environment variables inside references; use shell expansion for paths.
+
+Named lookup searches only this directory, never the working directory or parent projects. If both `screenshots.toml` and `screenshots.yaml` (or `.yml`) exist, the name is ambiguous and fails; select an explicit path instead. Listing shows each eligible name and origin path, including ambiguity, without parsing contents. Subdirectories, unsupported suffixes, and ineligible names are omitted. Missing storage lists as empty; validation/loading still requires a regular file. Inspection does not create directories, install presets, fetch remote files, or migrate history. Create the directory and save your templates yourself.
 
 ## Schema v1
 
@@ -36,6 +53,25 @@ mode = "snake"
 ```
 
 Keys are case-sensitive. Version 1 and at least one rule are required. Unknown fields, duplicate definitions/IDs, wrong value types, invalid patterns, and unknown modes fail before discovering input files. Parser errors include source locations when available; semantic errors identify the rule/field. Display labels, when present, must be nonempty and have no surrounding whitespace or control characters.
+
+Equivalent YAML ([executable example](../examples/templates/screenshots.yaml)):
+
+```yaml
+version: 1
+name: Screenshot names
+selection:
+  kind: files
+  recursive: false
+rules:
+  - id: screenshots
+    match:
+      glob: ["Screenshot*", "Screen Shot*"]
+      extensions: [".png"]
+    rename:
+      mode: snake
+```
+
+YAML accepts exactly one document with typed mappings/sequences/scalars. Anchors, aliases, merge keys, custom tags, nulls, and type coercion are rejected. Booleans must be lowercase `true`/`false`; version must be a canonical nonnegative decimal integer. Quote strings that YAML would interpret as numbers, booleans, nulls, or timestamps. Single-quoted strings preserve backslashes and interpolation quotes, e.g. `filename: 'shot_${file.modified | date("timestamp")}_${index | pad(3)}${file.ext | lower}'`. Literal/folded block scalars retain YAML's normal newline behavior; invalid resulting names are not silently repaired (use `|-` if no trailing newline is intended).
 
 Each rule requires a unique 1–64 byte ID starting with an ASCII letter/digit and otherwise containing letters, digits, `_`, `-`, or `.`. Supply exactly one of `rename.mode` and `rename.filename`. `rename.mode` supports `upper`, `lower`, `pascal`, `camel`, `snake`, `kebab`, `title`, `screaming`, and `sentence`, preserving the existing mode behavior. `rename.filename` produces the complete basename; see [fields, helpers, escaping, and limits](filename-patterns.md).
 
@@ -69,6 +105,6 @@ The preview prints the effective selection and override names. `--verbose` also 
 
 ## Limits and safety
 
-An explicit `.toml` file must be a regular file and contain at most 64 KiB of valid UTF-8. A preset may contain 1–128 rules, at most 32 glob/extension values per rule field and 32 additional ignores, and glob patterns of at most 1,024 bytes. Labels are limited to 128 bytes; extension values to 255 bytes. [Filename patterns have additional bounds](filename-patterns.md#diagnostics-limits-and-safety).
+A `.toml`, `.yaml`, or `.yml` file must be a regular file and contain at most 64 KiB of valid UTF-8. YAML also limits the parsed schema tree to 16 levels and 16,384 nodes before typed decoding. A preset may contain 1–128 rules, at most 32 glob/extension values per rule field and 32 additional ignores, and glob patterns of at most 1,024 bytes. Labels are limited to 128 bytes; extension values to 255 bytes. [Filename patterns have additional bounds](filename-patterns.md#diagnostics-limits-and-safety).
 
-The ordinary [rename/undo safety rules](../readme.md#rename-and-undo-safety) apply. In particular, preview is not a transaction or a promise that the filesystem will remain unchanged until apply; stale sources or newly occupied targets stop execution. History remains in its existing platform-native location. This slice does not create or search `~/.config/renym/templates` yet.
+The ordinary [rename/undo safety rules](../readme.md#rename-and-undo-safety) apply. In particular, preview is not a transaction or a promise that the filesystem will remain unchanged until apply; stale sources or newly occupied targets stop execution. Named references freeze the resolved origin path and normalized spec in the plan/history. Undo does not reload templates. History remains in its existing platform-native location, independent of template storage.

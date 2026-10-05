@@ -12,8 +12,8 @@ var templateCmd = &cobra.Command{
 }
 
 var validateTemplateCmd = &cobra.Command{
-	Use:   "validate <file.toml>",
-	Short: "Validate an explicit TOML preset without discovering or renaming files",
+	Use:   "validate <name-or-file>",
+	Short: "Validate a TOML/YAML template without discovering or renaming files",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := cmd.Context().Err(); err != nil {
@@ -24,12 +24,40 @@ var validateTemplateCmd = &cobra.Command{
 			return err
 		}
 		spec := compiled.Snapshot()
-		log.Info("Valid template: %s (%d rule(s), kind=%s, recursive=%t)\n", args[0], len(spec.Rules), spec.Selection.Kind, spec.Selection.Recursive)
+		log.Info("Valid template: %s (%d rule(s), kind=%s, recursive=%t)\n", compiled.SourcePath(), len(spec.Rules), spec.Selection.Kind, spec.Selection.Recursive)
+		return nil
+	},
+}
+
+var listTemplateCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List configured template names and origin paths",
+	Args:  cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := cmd.Context().Err(); err != nil {
+			return err
+		}
+		catalog, err := templates.List()
+		if err != nil {
+			return err
+		}
+		if len(catalog.Templates) == 0 {
+			log.Info("No templates found in %s\n", catalog.Directory)
+			return nil
+		}
+		for _, reference := range catalog.Templates {
+			status := ""
+			if reference.Ambiguous {
+				status = " (ambiguous; use explicit path)"
+			}
+			log.Info("%s\t%s%s\n", reference.Name, reference.Path, status)
+		}
 		return nil
 	},
 }
 
 func init() {
 	templateCmd.AddCommand(validateTemplateCmd)
+	templateCmd.AddCommand(listTemplateCmd)
 	rootCmd.AddCommand(templateCmd)
 }
