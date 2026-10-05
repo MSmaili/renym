@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -179,7 +180,7 @@ func TestLoadExplicitFileAndDiagnostics(t *testing.T) {
 		t.Fatalf("non-file input accepted: %v", err)
 	}
 	for _, path := range []string{filepath.Join(root, "absent.toml"), "preset", filepath.Join(root, "preset.yaml"), root + ".toml"} {
-		if _, err := Load(path); err == nil || !strings.Contains(err.Error(), path) {
+		if _, err := Load(path); err == nil || !strings.Contains(err.Error(), strconv.Quote(path)) {
 			t.Fatalf("missing path diagnostic: %s, %v", path, err)
 		}
 	}
@@ -187,7 +188,7 @@ func TestLoadExplicitFileAndDiagnostics(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := Load(filename)
-	if err == nil || !strings.Contains(err.Error(), filename) || !strings.Contains(err.Error(), "1|") {
+	if err == nil || !strings.Contains(err.Error(), strconv.Quote(filename)) || !strings.Contains(err.Error(), "1|") {
 		t.Fatalf("missing parser location: %v", err)
 	}
 	if err := os.WriteFile(filename, []byte(strings.Repeat("#", MaxBytes+1)), 0600); err != nil {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -86,7 +87,7 @@ func TestInvalidTemplatePrecedesDiscoveryAndNeverAccessesHistory(t *testing.T) {
 	req := withPreset(t, Request{Path: root}, strings.Replace(screenshotPreset, "version = 1", "version = 2", 1))
 	for _, path := range []string{root, filepath.Join(root, "missing")} {
 		req.Path = path
-		if _, err := service.Rename(context.Background(), req); err == nil || !strings.Contains(err.Error(), "version") || !strings.Contains(err.Error(), req.TemplatePath) {
+		if _, err := service.Rename(context.Background(), req); err == nil || !strings.Contains(err.Error(), "version") || !strings.Contains(err.Error(), strconv.Quote(req.TemplatePath)) {
 			t.Fatalf("configuration was not rejected first: %v", err)
 		}
 	}
