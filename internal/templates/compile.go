@@ -7,17 +7,41 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+
+	"github.com/MSmaili/renym/internal/templates/render"
 )
 
 var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
 // Compiled contains no mutable state or callable user code. All patterns and
 // modes are validated once; matching uses the standard library's path.Match.
-type Compiled struct{ spec Spec }
+type Compiled struct {
+	spec     Spec
+	programs []*render.Program
+}
 
 type Decision struct {
-	RuleID string
-	Mode   string
+	RuleID  string
+	Mode    string
+	program *render.Program
+}
+
+func (d Decision) RendersFilename() bool { return d.program != nil }
+func (d Decision) Dependencies() render.Dependencies {
+	if d.program == nil {
+		return render.Dependencies{}
+	}
+	return d.program.Dependencies()
+}
+func (d Decision) Render(ctx render.Context) (string, error) {
+	if d.program == nil {
+		return "", fmt.Errorf("rule %q does not render a filename", d.RuleID)
+	}
+	name, err := d.program.Render(ctx)
+	if err != nil {
+		return "", fmt.Errorf("rule %q rename.filename: %w", d.RuleID, err)
+	}
+	return name, nil
 }
 
 func compile(doc document) (*Compiled, error) {
@@ -44,6 +68,7 @@ func compile(doc document) (*Compiled, error) {
 		return nil, fmt.Errorf("rules: expected 1 to %d rules", MaxRules)
 	}
 	seen := make(map[string]bool, len(spec.Rules))
+	programs := make([]*render.Program, len(spec.Rules))
 	for i, rule := range spec.Rules {
 		field := fmt.Sprintf("rules[%d] (%q)", i+1, rule.ID)
 		if !identifier.MatchString(rule.ID) {
@@ -67,11 +92,17 @@ func compile(doc document) (*Compiled, error) {
 				return nil, fmt.Errorf("%s.match.extensions: %q must be a lowercase dot-prefixed last extension, such as .png", field, ext)
 			}
 		}
-		if !slices.Contains([]string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "screaming", "sentence"}, rule.Rename.Mode) {
+		if rule.Rename.Filename != nil {
+			program, err := render.Compile(*rule.Rename.Filename)
+			if err != nil {
+				return nil, fmt.Errorf("%s.rename.filename: %w", field, err)
+			}
+			programs[i] = program
+		} else if !slices.Contains([]string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "screaming", "sentence"}, rule.Rename.Mode) {
 			return nil, fmt.Errorf("%s.rename.mode: unknown mode %q", field, rule.Rename.Mode)
 		}
 	}
-	return &Compiled{spec: spec}, nil
+	return &Compiled{spec: spec, programs: programs}, nil
 }
 
 func validateGlobs(field string, globs []string) error {
@@ -100,6 +131,10 @@ func (c *Compiled) Snapshot() Spec {
 	spec.Selection = c.Selection()
 	spec.Rules = slices.Clone(c.spec.Rules)
 	for i := range spec.Rules {
+		if filename := spec.Rules[i].Rename.Filename; filename != nil {
+			copy := *filename
+			spec.Rules[i].Rename.Filename = &copy
+		}
 		spec.Rules[i].Match.Glob = slices.Clone(spec.Rules[i].Match.Glob)
 		spec.Rules[i].Match.Extensions = slices.Clone(spec.Rules[i].Match.Extensions)
 	}
@@ -109,7 +144,7 @@ func (c *Compiled) Snapshot() Spec {
 // Match chooses exactly one action from the original basename/kind. Matching
 // never cascades through generated names, even if the first action is a no-op.
 func (c *Compiled) Match(basename string, directory bool) (Decision, bool) {
-	for _, rule := range c.spec.Rules {
+	for i, rule := range c.spec.Rules {
 		if len(rule.Match.Glob) > 0 {
 			matched := false
 			for _, glob := range rule.Match.Glob {
@@ -134,7 +169,7 @@ func (c *Compiled) Match(basename string, directory bool) (Decision, bool) {
 				continue
 			}
 		}
-		return Decision{RuleID: rule.ID, Mode: rule.Rename.Mode}, true
+		return Decision{RuleID: rule.ID, Mode: rule.Rename.Mode, program: c.programs[i]}, true
 	}
 	return Decision{}, false
 }

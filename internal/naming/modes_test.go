@@ -1,4 +1,4 @@
-package engine
+package naming
 
 import (
 	"testing"
@@ -80,9 +80,14 @@ func TestModes(t *testing.T) {
 		{"sentence case -> My file", "sentence", "My file", "My file"},
 	}
 
+	modes := map[string]RenameMode{
+		"upper": UpperCaseMode{}, "lower": LowerCaseMode{}, "pascal": PascalCaseMode{},
+		"camel": CamelCaseMode{}, "snake": SnakeCaseMode{}, "kebab": KebabCaseMode{},
+		"title": TitleCaseMode{}, "screaming": ScreamingSnakeMode{}, "sentence": SentenceCaseMode{},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mode := ModeRegistry[tt.mode]
+			mode := modes[tt.mode]
 			got := mode.Transform(tt.in)
 			assert.Equal(t, got, tt.want)
 		})

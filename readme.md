@@ -76,7 +76,7 @@ renym --template ./examples/templates/screenshots.toml -p ./inbox --dry-run
 renym --template ./examples/templates/screenshots.toml -p ./inbox
 ```
 
-Use ordered rules with existing rename modes. [Schema, matching, and CLI overrides](docs/templates.md). `--template` and `--mode` are exclusive. YAML, filename expressions, and named lookup are not available yet.
+Use ordered rules with existing rename modes or [bounded filename patterns](docs/filename-patterns.md). [Schema, matching, and CLI overrides](docs/templates.md). `--template` and `--mode` are exclusive. YAML and named lookup are not available yet.
 
 ## Rename and undo safety
 

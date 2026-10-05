@@ -12,7 +12,7 @@ renym undo --dry-run
 renym undo
 ```
 
-This is the initial mode-preset slice. YAML, named lookup, `template list`, filename expressions, moving, watching, and AI actions are **not supported yet**. Unsupported fields are errors, not ignored behavior. `--template` and `--mode` are exclusive, even when one is explicitly empty. No preset is automatically discovered or executed from a project directory.
+TOML supports existing mode presets and [bounded filename patterns](filename-patterns.md). YAML, named lookup, `template list`, moving, watching, and AI actions are **not supported yet**. Unsupported fields are errors, not ignored behavior. `--template` and `--mode` are exclusive, even when one is explicitly empty. No preset is automatically discovered or executed from a project directory.
 
 ## Schema v1
 
@@ -37,7 +37,7 @@ mode = "snake"
 
 Keys are case-sensitive. Version 1 and at least one rule are required. Unknown fields, duplicate definitions/IDs, wrong value types, invalid patterns, and unknown modes fail before discovering input files. Parser errors include source locations when available; semantic errors identify the rule/field. Display labels, when present, must be nonempty and have no surrounding whitespace or control characters.
 
-Each rule requires a unique 1–64 byte ID starting with an ASCII letter/digit and otherwise containing letters, digits, `_`, `-`, or `.`. `rename.mode` supports `upper`, `lower`, `pascal`, `camel`, `snake`, `kebab`, `title`, `screaming`, and `sentence`, preserving the existing mode behavior.
+Each rule requires a unique 1–64 byte ID starting with an ASCII letter/digit and otherwise containing letters, digits, `_`, `-`, or `.`. Supply exactly one of `rename.mode` and `rename.filename`. `rename.mode` supports `upper`, `lower`, `pascal`, `camel`, `snake`, `kebab`, `title`, `screaming`, and `sentence`, preserving the existing mode behavior. `rename.filename` produces the complete basename; see [fields, helpers, escaping, and limits](filename-patterns.md).
 
 ## Matching and naming
 
@@ -65,10 +65,10 @@ Unspecified CLI defaults do **not** replace the preset's selection. Only explici
 | `--ignore=""`                    | Clears the preset's additional ignores, not the default ignores                    |
 | `--no-default-ignore=true/false` | Overrides the default-ignore switch                                                |
 
-The preview prints the effective selection and override names. `--verbose` also shows the chosen rule and mode for each matched item. Dry runs and `template validate` never write undo history. Apply stores a normalized preset snapshot alongside its effective request, so subsequent preset edits cannot change an already-created plan or its undo steps.
+The preview prints the effective selection and override names. `--verbose` also shows the chosen rule, action, and per-rule index for each matched item. Dry runs and `template validate` never write undo history. Apply stores a normalized preset snapshot alongside its effective request, so subsequent preset edits cannot change an already-created plan or its undo steps.
 
 ## Limits and safety
 
-An explicit `.toml` file must be a regular file and contain at most 64 KiB of valid UTF-8. A preset may contain 1–128 rules, at most 32 glob/extension values per rule field and 32 additional ignores, and glob patterns of at most 1,024 bytes. Labels are limited to 128 bytes; extension values to 255 bytes. These are mode-preset limits, not a filename-renderer grammar contract.
+An explicit `.toml` file must be a regular file and contain at most 64 KiB of valid UTF-8. A preset may contain 1–128 rules, at most 32 glob/extension values per rule field and 32 additional ignores, and glob patterns of at most 1,024 bytes. Labels are limited to 128 bytes; extension values to 255 bytes. [Filename patterns have additional bounds](filename-patterns.md#diagnostics-limits-and-safety).
 
 The ordinary [rename/undo safety rules](../readme.md#rename-and-undo-safety) apply. In particular, preview is not a transaction or a promise that the filesystem will remain unchanged until apply; stale sources or newly occupied targets stop execution. History remains in its existing platform-native location. This slice does not create or search `~/.config/renym/templates` yet.

@@ -140,7 +140,11 @@ func runRename(cmd *cobra.Command, args []string) error {
 			log.Info("CLI overrides: %s\n", strings.Join(plan.Overrides, ", "))
 		}
 		for _, match := range plan.Matches {
-			log.Debug("Rule %s (%s): %s\n", match.RuleID, match.Mode, match.Path)
+			action := match.Mode
+			if match.Filename {
+				action = "filename"
+			}
+			log.Debug("Rule %s (%s, index=%d): %s\n", match.RuleID, action, match.Index, match.Path)
 		}
 	}
 

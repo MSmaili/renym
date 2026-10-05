@@ -1,5 +1,5 @@
 // Package templates loads declarative rename presets. It does not discover or
-// mutate input files, execute expressions, or perform classification.
+// mutate input files, run arbitrary code, or perform classification.
 package templates
 
 const (
@@ -37,7 +37,8 @@ type Match struct {
 }
 
 type Rename struct {
-	Mode string `toml:"mode" json:"mode"`
+	Mode     string  `toml:"mode" json:"mode,omitempty"`
+	Filename *string `toml:"filename" json:"filename,omitempty"`
 }
 
 // Pointer fields in the wire representation distinguish omission from explicit

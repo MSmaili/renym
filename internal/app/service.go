@@ -15,6 +15,7 @@ import (
 	"github.com/MSmaili/renym/internal/fs"
 	"github.com/MSmaili/renym/internal/history"
 	"github.com/MSmaili/renym/internal/templates"
+	"github.com/MSmaili/renym/internal/templates/render"
 	"github.com/MSmaili/renym/internal/walker"
 )
 
@@ -101,6 +102,7 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	sort.SliceStable(paths, func(i, j int) bool { return filepath.ToSlash(paths[i]) < filepath.ToSlash(paths[j]) })
 	plan := Plan{root: root, request: req, Overrides: overrides}
 	names, reasons := make(map[string]string, len(paths)), make(map[string]string)
+	ordinals := make(map[string]int64)
 	for _, path := range paths {
 		if err := ctx.Err(); err != nil {
 			return Plan{}, err
@@ -113,7 +115,30 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 				continue
 			}
 			mode = engine.ModeRegistry[decision.Mode]
-			plan.Matches = append(plan.Matches, RuleMatch{Path: path, RuleID: decision.RuleID, Mode: decision.Mode})
+			ordinals[decision.RuleID]++
+			ordinal := ordinals[decision.RuleID]
+			plan.Matches = append(plan.Matches, RuleMatch{Path: path, RuleID: decision.RuleID, Mode: decision.Mode, Filename: decision.RendersFilename(), Index: ordinal})
+			if decision.RendersFilename() {
+				snapshot := snapshots[path]
+				renderContext := render.Context{Name: filepath.Base(path), Directory: snapshot.Mode.IsDir()}
+				dependencies := decision.Dependencies()
+				if dependencies.Modified {
+					renderContext.Modified = &snapshot.Modified
+				}
+				if dependencies.Size && !renderContext.Directory {
+					renderContext.Size = &snapshot.Size
+				}
+				if dependencies.Index {
+					renderContext.Index = ordinal
+				}
+				name, err := decision.Render(renderContext)
+				if err != nil {
+					reasons[path] = err.Error()
+				} else {
+					names[path] = name
+				}
+				continue
+			}
 		}
 		names[path] = engine.ModeBasename(filepath.Base(path), snapshots[path].Mode.IsDir(), mode, s.adapter)
 	}

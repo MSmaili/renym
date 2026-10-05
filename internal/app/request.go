@@ -33,9 +33,11 @@ type SelectionOverrides struct {
 }
 
 type RuleMatch struct {
-	Path   string `json:"path"`
-	RuleID string `json:"rule_id"`
-	Mode   string `json:"mode"`
+	Path     string `json:"path"`
+	RuleID   string `json:"rule_id"`
+	Mode     string `json:"mode"`
+	Filename bool   `json:"filename,omitempty"`
+	Index    int64  `json:"index"`
 }
 
 // Plan keeps executable snapshots private; presentation receives a separate

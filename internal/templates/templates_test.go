@@ -58,7 +58,7 @@ func TestInvalidPresets(t *testing.T) {
 		"missing mode":             strings.Replace(valid, "mode = 'snake'", "", 1),
 		"unknown root field":       "extra = true\n" + valid,
 		"unknown empty table":      valid + "\n[future]\n",
-		"unsupported filename":     valid + "filename = '${file.stem}'\n",
+		"both rename actions":      valid + "filename = '${file.stem}'\n",
 		"future move":              valid + "move = '/tmp'\n",
 		"duplicate key":            "version = 1\n" + valid,
 		"duplicate ID":             valid + "\n[[rules]]\nid = 'all'\n[rules.rename]\nmode = 'kebab'\n",
@@ -231,6 +231,7 @@ func TestLimits(t *testing.T) {
 
 func FuzzParse(f *testing.F) {
 	f.Add([]byte(preset))
+	f.Add([]byte("version=1\n[[rules]]\nid='all'\n[rules.rename]\nfilename='${file.stem | snake}${file.ext}'\n"))
 	f.Add([]byte("version=1\n"))
 	f.Add([]byte("[rules]\nfilename='${shell}'"))
 	f.Add([]byte{})

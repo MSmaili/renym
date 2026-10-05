@@ -37,8 +37,13 @@ func validateKeys(root map[string]any) error {
 			return err
 		}
 		rename, _ := rule["rename"].(map[string]any)
-		if err := exactKeys(rename, field+".rename", "mode"); err != nil {
+		if err := exactKeys(rename, field+".rename", "mode", "filename"); err != nil {
 			return err
+		}
+		_, mode := rename["mode"]
+		_, filename := rename["filename"]
+		if mode == filename {
+			return fmt.Errorf("%s.rename: supply exactly one of mode or filename", field)
 		}
 	}
 	return nil
