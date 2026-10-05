@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -209,7 +210,7 @@ func TestLoadFormatsAndNamedOrigins(t *testing.T) {
 	if err := os.WriteFile(path, []byte("version: '1'"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Load("bad"); err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), "line 1") {
+	if _, err := Load("bad"); err == nil || !strings.Contains(err.Error(), strconv.Quote(path)) || !strings.Contains(err.Error(), "line 1") {
 		t.Fatalf("lost file/location: %v", err)
 	}
 	if err := os.WriteFile(path, []byte(strings.Repeat("#", MaxBytes+1)), 0600); err != nil {
