@@ -568,6 +568,46 @@ func TestPreparedMoveConcurrentCheckExecuteAndClose(t *testing.T) {
 	}
 }
 
+func TestPrepareMoveAcceptsOnlyFrozenFinalParents(t *testing.T) {
+	for _, side := range []string{"source", "destination"} {
+		t.Run(side, func(t *testing.T) {
+			req := moveFixture(t)
+			var err error
+			req.SourceParent, err = Capture(filepath.Dir(moveOld(req)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.DestinationParent, err = Capture(filepath.Dir(moveNew(req)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			parent := filepath.Dir(moveNew(req))
+			if side == "source" {
+				parent = filepath.Dir(moveOld(req))
+			}
+			if err := os.Rename(parent, parent+"-original"); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(parent, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if side == "source" {
+				if err := os.Rename(filepath.Join(parent+"-original", "source.txt"), moveOld(req)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			move, err := PrepareMove(context.Background(), req)
+			if move != nil {
+				_ = move.Close()
+			}
+			if !errors.Is(err, ErrStalePlan) {
+				t.Fatalf("replaced final parent accepted: %v", err)
+			}
+			assertMoveBytes(t, moveOld(req), "source bytes")
+		})
+	}
+}
+
 func FuzzMoveRelativePath(f *testing.F) {
 	for _, source := range []string{"source.txt", "nested/photo.png", "../escape", "/absolute", `C:\escape`, "", "a//b", "a\x00b", "CON", "emoji_😀.png"} {
 		f.Add(source)

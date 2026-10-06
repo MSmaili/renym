@@ -63,12 +63,17 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 		return Plan{}, errors.New("organization input must be an existing directory")
 	}
 	var organization *organizationPreview
+	var sourceDirectory *fs.Snapshot
 	if compiled != nil && compiled.HasMoves() {
 		path, err = filepath.EvalSymlinks(path)
 		if err != nil {
 			return Plan{}, err
 		}
 		organization, err = prepareOrganization(path, compiled)
+		if err != nil {
+			return Plan{}, err
+		}
+		sourceDirectory, err = fs.Capture(path)
 		if err != nil {
 			return Plan{}, err
 		}
@@ -115,6 +120,7 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	// depth. Matching always uses original names/kinds, never proposed targets.
 	sort.SliceStable(paths, func(i, j int) bool { return filepath.ToSlash(paths[i]) < filepath.ToSlash(paths[j]) })
 	plan := Plan{root: root, request: req, Overrides: overrides, SourcePath: path, PreviewOnly: organization != nil, previewOnly: organization != nil}
+	plan.sourceDirectory = sourceDirectory
 	targets, reasons := make(map[string]string, len(paths)), make(map[string]string)
 	missing := make(map[string][]string)
 	ordinals := make(map[string]int64)
@@ -243,6 +249,9 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 		plan.Selection = templates.Selection{Kind: kind, Recursive: req.Recursive, Ignore: append([]string(nil), req.Ignore...), NoDefaultIgnore: req.NoDefaultIgnore}
 	}
 	plan.Result.Operations = append([]engine.RenameOp(nil), result.Operations...)
+	if plan.previewOnly {
+		plan.proposalSources = make(map[string]fs.Snapshot, len(result.Operations))
+	}
 	for _, op := range result.Operations {
 		if err := ctx.Err(); err != nil {
 			return Plan{}, err
@@ -250,6 +259,8 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 		snapshot := snapshots[op.OldPath]
 		if !plan.previewOnly {
 			plan.operations = append(plan.operations, fs.RenameOp{ID: len(plan.operations) + 1, OldPath: op.OldPath, NewPath: op.NewPath, Source: snapshot})
+		} else {
+			plan.proposalSources[op.OldPath] = *snapshot
 		}
 	}
 	return plan, nil

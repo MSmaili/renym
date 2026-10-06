@@ -23,18 +23,23 @@ const (
 
 // MoveRequest uses canonical roots and slash-separated relative names.
 type MoveRequest struct {
-	SourceRoot, DestinationRoot           string
-	SourceDirectory, DestinationDirectory *Snapshot
-	OldRelative, NewRelative              string
-	Source                                *Snapshot
+	SourceRoot           string    `json:"source_root"`
+	DestinationRoot      string    `json:"destination_root"`
+	SourceDirectory      *Snapshot `json:"source_directory"`
+	DestinationDirectory *Snapshot `json:"destination_directory"`
+	OldRelative          string    `json:"old_relative"`
+	NewRelative          string    `json:"new_relative"`
+	Source               *Snapshot `json:"source"`
+	SourceParent         *Snapshot `json:"source_parent,omitempty"`
+	DestinationParent    *Snapshot `json:"destination_parent,omitempty"`
 }
 
 // MoveOutcome requires reconciliation when Completed is true but Verified is false.
 type MoveOutcome struct {
-	Attempted bool
-	Completed bool
-	Verified  bool
-	Target    *Snapshot
+	Attempted bool      `json:"attempted"`
+	Completed bool      `json:"completed"`
+	Verified  bool      `json:"verified"`
+	Target    *Snapshot `json:"target,omitempty"`
 }
 
 type directoryLink struct {
@@ -216,6 +221,9 @@ func PrepareMove(ctx context.Context, req MoveRequest) (*PreparedMove, error) {
 	if err == nil && m.from.volume() != m.to.volume() {
 		err = ErrCrossFilesystem
 	}
+	if err == nil && (!m.from.matchesParent(req.SourceParent) || !m.to.matchesParent(req.DestinationParent)) {
+		err = ErrStalePlan
+	}
 	if err == nil {
 		m.source, err = moveOpenFileAt(m.from.parent(), m.oldName, true)
 	}
@@ -256,6 +264,10 @@ func (c *directoryChain) check(ctx context.Context) error {
 	return nil
 }
 
+func (c *directoryChain) matchesParent(expected *Snapshot) bool {
+	return expected == nil || sameSnapshot(&c.links[len(c.links)-1].snapshot, expected)
+}
+
 func (m *PreparedMove) check(ctx context.Context) error {
 	if m.closed {
 		return os.ErrClosed
@@ -272,6 +284,13 @@ func (m *PreparedMove) check(ctx context.Context) error {
 	if err := m.to.check(ctx); err != nil {
 		return err
 	}
+	if err := m.checkSource(); err != nil {
+		return err
+	}
+	return moveEntryAbsent(m.to.parent(), m.newName)
+}
+
+func (m *PreparedMove) checkSource() error {
 	file, err := moveOpenFileAt(m.from.parent(), m.oldName, false)
 	if err != nil {
 		return err
@@ -294,7 +313,35 @@ func (m *PreparedMove) check(ctx context.Context) error {
 	if err := moveCheckSource(m.source); err != nil {
 		return err
 	}
-	return moveEntryAbsent(m.to.parent(), m.newName)
+	return nil
+}
+
+// CheckMoveSource validates the source without requiring existing output parents.
+func CheckMoveSource(ctx context.Context, req MoveRequest) error {
+	parts, err := moveComponents(req.OldRelative)
+	if err != nil {
+		return err
+	}
+	if req.Source == nil || req.Source.Identity == "" || !req.Source.Mode.IsRegular() {
+		return ErrUnsafeMovePath
+	}
+	m := &PreparedMove{expected: *req.Source, oldName: parts[len(parts)-1]}
+	defer m.Close()
+	m.from, err = pinMoveParent(ctx, req.SourceRoot, req.SourceDirectory, parts[:len(parts)-1])
+	if err != nil {
+		return err
+	}
+	if !m.from.matchesParent(req.SourceParent) {
+		return ErrStalePlan
+	}
+	m.source, err = moveOpenFileAt(m.from.parent(), m.oldName, true)
+	if err != nil {
+		return err
+	}
+	if err := m.from.check(ctx); err != nil {
+		return err
+	}
+	return m.checkSource()
 }
 
 func (m *PreparedMove) Check(ctx context.Context) error {

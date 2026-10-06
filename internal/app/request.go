@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/MSmaili/renym/internal/engine"
 	"github.com/MSmaili/renym/internal/fs"
+	"github.com/MSmaili/renym/internal/history"
 	"github.com/MSmaili/renym/internal/templates"
 )
 
@@ -58,10 +59,19 @@ type Plan struct {
 	root                string
 	request             Request
 	templateSpec        *templates.Spec
+	organization        *organizationPlan
+	proposalSources     map[string]fs.Snapshot
+	sourceDirectory     *fs.Snapshot
 }
 
 type Result struct {
-	Plan      engine.PlanResult
-	Execution fs.Result
-	HistoryID string
+	Plan                   engine.PlanResult
+	Execution              fs.Result
+	HistoryID              string
+	DirectoriesCreated     []fs.OwnedDirectory
+	DirectoriesRemoved     []fs.OwnedDirectory
+	DirectoriesRetained    []history.DirectoryRetention
+	RequiresReconciliation bool
+	MoveOutcomes           []fs.MoveOutcome
+	DirectoryOutcomes      []fs.DirectoryOutcome
 }

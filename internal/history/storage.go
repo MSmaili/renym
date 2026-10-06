@@ -173,7 +173,13 @@ func (s *GlobalStore) latestFile(histDir string) (string, error) {
 		if err != nil {
 			return name, nil
 		} // Corrupt records block rather than disappear.
-		if entry.SchemaVersion != 0 && (entry.SchemaVersion != SchemaVersion || entry.State != Complete && entry.State != Partial) {
+		if entry.SchemaVersion == OrganizationSchemaVersion && (entry.Organization == nil || entry.Organization.Active != nil) {
+			return name, nil
+		}
+		if organizationUndoComplete(entry) {
+			continue
+		}
+		if entry.SchemaVersion != 0 && (!VerifiedVersion(entry.SchemaVersion) || entry.State != Complete && entry.State != Partial) {
 			return name, nil // Never bury uncertain intent behind newer records.
 		}
 		if latest == "" || entry.Timestamp.After(latestTime) || entry.Timestamp.Equal(latestTime) && name > latest {

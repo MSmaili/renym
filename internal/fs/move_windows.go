@@ -40,13 +40,20 @@ func moveNTError(err error) error {
 }
 
 func moveNTOpen(parent windows.Handle, name string, directory, forMove bool) (*os.File, error) {
+	file, _, err := moveNTOpenWithOptions(parent, name, ntOpenOptions{directory: directory, delete: forMove, shareDelete: !directory && !forMove})
+	return file, err
+}
+
+type ntOpenOptions struct{ directory, delete, create, shareDelete bool }
+
+func moveNTOpenWithOptions(parent windows.Handle, name string, flags ntOpenOptions) (*os.File, bool, error) {
 	utf16, err := windows.UTF16FromString(name)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	// Bound UTF-16 lengths before narrowing; avoid vulnerable NewNTUnicodeString.
 	if len(utf16) > 32767 {
-		return nil, ErrUnsafeMovePath
+		return nil, false, ErrUnsafeMovePath
 	}
 	unicode := windows.NTUnicodeString{Length: uint16((len(utf16) - 1) * 2), MaximumLength: uint16(len(utf16) * 2), Buffer: &utf16[0]}
 	attrs := windows.OBJECT_ATTRIBUTES{RootDirectory: parent, ObjectName: &unicode, Attributes: windows.OBJ_CASE_INSENSITIVE}
@@ -54,22 +61,27 @@ func moveNTOpen(parent windows.Handle, name string, directory, forMove bool) (*o
 	access := uint32(windows.FILE_READ_ATTRIBUTES | windows.SYNCHRONIZE)
 	options := uint32(windows.FILE_SYNCHRONOUS_IO_NONALERT | windows.FILE_OPEN_REPARSE_POINT)
 	share := uint32(windows.FILE_SHARE_READ | windows.FILE_SHARE_WRITE)
-	if directory {
+	if flags.directory {
 		access |= windows.FILE_TRAVERSE
 		options |= windows.FILE_DIRECTORY_FILE
 	} else {
 		options |= windows.FILE_NON_DIRECTORY_FILE
-		if forMove {
-			access |= windows.DELETE
-		} else {
-			share |= windows.FILE_SHARE_DELETE
-		}
+	}
+	if flags.delete {
+		access |= windows.DELETE
+	}
+	if flags.shareDelete {
+		share |= windows.FILE_SHARE_DELETE
+	}
+	disposition := uint32(windows.FILE_OPEN)
+	if flags.create {
+		disposition = windows.FILE_CREATE
 	}
 	var handle windows.Handle
-	err = windows.NtCreateFile(&handle, access, &attrs, &windows.IO_STATUS_BLOCK{}, nil, 0, share, windows.FILE_OPEN, options, 0, 0)
+	err = windows.NtCreateFile(&handle, access, &attrs, &windows.IO_STATUS_BLOCK{}, nil, 0, share, disposition, options, 0, 0)
 	runtime.KeepAlive(utf16)
 	if err != nil {
-		return nil, moveNTError(err)
+		return nil, false, moveNTError(err)
 	}
 	var info windows.ByHandleFileInformation
 	err = windows.GetFileInformationByHandle(handle, &info)
@@ -86,9 +98,9 @@ func moveNTOpen(parent windows.Handle, name string, directory, forMove bool) (*o
 	}
 	if err != nil {
 		_ = windows.CloseHandle(handle)
-		return nil, err
+		return nil, flags.create, err
 	}
-	return os.NewFile(uintptr(handle), name), nil
+	return os.NewFile(uintptr(handle), name), flags.create, nil
 }
 
 func moveOpenVolume(path string) (*os.File, error) {

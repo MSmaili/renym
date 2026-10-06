@@ -7,13 +7,19 @@ import (
 )
 
 const SchemaVersion = 1
+const OrganizationSchemaVersion = 2
+
+func VerifiedVersion(version int) bool {
+	return version == SchemaVersion || version == OrganizationSchemaVersion
+}
 
 const (
-	Pending     = "pending"
-	Complete    = "complete"
-	Partial     = "partial"
-	Undoing     = "undoing"
-	PartialUndo = "partial_undo"
+	Pending            = "pending"
+	Complete           = "complete"
+	Partial            = "partial"
+	Undoing            = "undoing"
+	PartialUndo        = "partial_undo"
+	OrganizationUndone = "organization_undone"
 )
 
 type Entry struct {
@@ -33,17 +39,51 @@ type Entry struct {
 
 	Command string `json:"command"`
 
-	Config     any         `json:"config"`
-	Operations []Operation `json:"operations"`
-	Skipped    []Skipped   `json:"skipped"`
-	Collisions []Collision `json:"collisions"`
+	Config       any           `json:"config"`
+	Operations   []Operation   `json:"operations"`
+	Skipped      []Skipped     `json:"skipped"`
+	Collisions   []Collision   `json:"collisions"`
+	Organization *Organization `json:"organization,omitempty"`
 }
 
 type Operation struct {
-	Old    string       `json:"old"`
-	New    string       `json:"new"`
-	ID     int          `json:"id,omitempty"`
-	Source *fs.Snapshot `json:"source,omitempty"`
+	Old    string          `json:"old"`
+	New    string          `json:"new"`
+	ID     int             `json:"id,omitempty"`
+	Source *fs.Snapshot    `json:"source,omitempty"`
+	Move   *fs.MoveRequest `json:"move,omitempty"`
+}
+
+type Organization struct {
+	SourceRoot       string                `json:"source_root"`
+	SourceSnapshot   *fs.Snapshot          `json:"source_snapshot"`
+	DirectoryIntents []fs.DirectoryRequest `json:"directory_intents,omitempty"`
+	Directories      []fs.OwnedDirectory   `json:"directories,omitempty"`
+	Cleaned          int                   `json:"cleaned,omitempty"`
+	Retained         []DirectoryRetention  `json:"retained,omitempty"`
+	Active           *OrganizationStep     `json:"active,omitempty"`
+	Bindings         []DirectoryBinding    `json:"bindings"`
+	Error            string                `json:"error,omitempty"`
+}
+
+type DirectoryBinding struct {
+	Request  fs.DirectoryRequest `json:"request"`
+	Snapshot *fs.Snapshot        `json:"snapshot"`
+}
+
+type OrganizationStep struct {
+	Action           string               `json:"action"`
+	OperationID      int                  `json:"operation_id,omitempty"`
+	Directory        *fs.DirectoryRequest `json:"directory,omitempty"`
+	MoveOutcome      *fs.MoveOutcome      `json:"move_outcome,omitempty"`
+	Move             *fs.MoveRequest      `json:"move,omitempty"`
+	DirectoryOutcome *fs.DirectoryOutcome `json:"directory_outcome,omitempty"`
+	Error            string               `json:"error,omitempty"`
+}
+
+type DirectoryRetention struct {
+	Directory fs.OwnedDirectory `json:"directory"`
+	Reason    string            `json:"reason"`
 }
 
 type Failure struct {
