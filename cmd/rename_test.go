@@ -94,7 +94,12 @@ func TestRenameRequestInputPresence(t *testing.T) {
 }
 
 func TestOrganizationCommandRequiresInputAndOnlyPreviews(t *testing.T) {
-	base := t.TempDir()
+	// Preview paths are canonicalized, including Windows short temp-directory
+	// aliases and macOS /var links. Build expected targets from the same origin.
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	input, output, policy := filepath.Join(base, "inbox"), filepath.Join(base, "sorted"), filepath.Join(base, "policy.yaml")
 	if err := os.Mkdir(input, 0700); err != nil {
 		t.Fatal(err)
