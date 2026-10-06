@@ -290,7 +290,7 @@ func (m *PreparedMove) check(ctx context.Context) error {
 	if identityVolume(actual.Identity) != m.from.volume() {
 		return ErrCrossFilesystem
 	}
-	return moveTargetAbsent(m.to.parent(), m.newName)
+	return moveEntryAbsent(m.to.parent(), m.newName)
 }
 
 func (m *PreparedMove) Check(ctx context.Context) error {
@@ -325,6 +325,9 @@ func (m *PreparedMove) execute(ctx context.Context, rename func() error) (MoveOu
 	verificationContext := context.WithoutCancel(ctx)
 	if err := errors.Join(m.from.check(verificationContext), m.to.check(verificationContext)); err != nil {
 		return result, fmt.Errorf("move completed but directory lineage requires reconciliation: %w", err)
+	}
+	if err := moveEntryAbsent(m.from.parent(), m.oldName); err != nil {
+		return result, fmt.Errorf("rename reported success but source name requires reconciliation: %w", err)
 	}
 	file, err := moveOpenFileAt(m.to.parent(), m.newName, false)
 	if err != nil {

@@ -73,7 +73,7 @@ func moveHandleIdentity(_ *os.File, info os.FileInfo) (string, error) {
 	return fmt.Sprintf("%d:%d", stat.Dev, stat.Ino), nil
 }
 
-func moveTargetAbsent(parent *os.File, name string) error {
+func moveEntryAbsent(parent *os.File, name string) error {
 	defer runtime.KeepAlive(parent)
 	var stat unix.Stat_t
 	err := unix.Fstatat(int(parent.Fd()), name, &stat, unix.AT_SYMLINK_NOFOLLOW)

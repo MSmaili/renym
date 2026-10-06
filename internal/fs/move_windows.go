@@ -124,7 +124,7 @@ func moveHandleIdentity(file *os.File, _ os.FileInfo) (string, error) {
 
 func moveCheckLocal(_ *os.File) error { return nil }
 
-func moveTargetAbsent(parent *os.File, name string) error {
+func moveEntryAbsent(parent *os.File, name string) error {
 	file, err := moveOpenFileAt(parent, name, false)
 	if err == nil {
 		_ = file.Close()

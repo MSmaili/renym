@@ -161,10 +161,41 @@ func TestPreparedMoveNativeHardLinkDestinationAppearanceRace(t *testing.T) {
 		}
 		return moveRenameNoReplace(m.from.parent(), m.oldName, m.source, m.to.parent(), m.newName)
 	})
-	if err == nil || !result.Attempted || result.Completed || result.Verified {
-		t.Fatalf("native hard-link conflict treated as completed move: %+v %v", result, err)
+	expectNativeSuccess := runtime.GOOS == "windows"
+	if !errors.Is(err, os.ErrExist) || !result.Attempted || result.Completed != expectNativeSuccess || result.Verified || result.Target != nil {
+		t.Fatalf("native hard-link conflict treated as verified move: %+v %v", result, err)
 	}
 	assertMoveBytes(t, moveOld(req), "source bytes")
+	assertMoveBytes(t, moveNew(req), "source bytes")
+}
+
+func TestPreparedMoveRejectsSuccessfulNativeNoOp(t *testing.T) {
+	req := moveFixture(t)
+	move := prepareTestMove(t, req)
+	result, err := move.execute(context.Background(), func() error { return nil })
+	if !errors.Is(err, os.ErrExist) || !result.Attempted || !result.Completed || result.Verified || result.Target != nil {
+		t.Fatalf("native no-op treated as verified move: %+v %v", result, err)
+	}
+	assertMoveBytes(t, moveOld(req), "source bytes")
+	if _, err := os.Lstat(moveNew(req)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("no-op changed destination: %v", err)
+	}
+}
+
+func TestPreparedMoveReoccupiedSourceRequiresReconciliation(t *testing.T) {
+	req := moveFixture(t)
+	move := prepareTestMove(t, req)
+	result, err := move.execute(context.Background(), func() error {
+		if err := moveRenameNoReplace(move.from.parent(), move.oldName, move.source, move.to.parent(), move.newName); err != nil {
+			return err
+		}
+		writeMoveBytes(t, moveOld(req), "new arrival")
+		return nil
+	})
+	if !errors.Is(err, os.ErrExist) || !result.Completed || result.Verified || result.Target != nil {
+		t.Fatalf("reoccupied source treated as verified move: %+v %v", result, err)
+	}
+	assertMoveBytes(t, moveOld(req), "new arrival")
 	assertMoveBytes(t, moveNew(req), "source bytes")
 }
 
