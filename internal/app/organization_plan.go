@@ -30,18 +30,7 @@ type organizationPlanner struct {
 	sources            map[string]fs.Snapshot
 }
 
-// Internal acceptance path only; the public preview gate remains in place.
-func (s *Service) planOrganization(ctx context.Context, req Request) (Plan, error) {
-	previewRequest := req
-	previewRequest.DryRun = true
-	plan, err := s.Plan(ctx, previewRequest)
-	if err != nil {
-		return Plan{}, err
-	}
-	if !plan.previewOnly {
-		return Plan{}, errors.New("expected organization template")
-	}
-	plan.request.DryRun = req.DryRun
+func (s *Service) bindOrganizationPlan(ctx context.Context, plan Plan) (Plan, error) {
 	p := &organizationPlan{}
 	p.source = cloneValue(plan.sourceDirectory)
 	planner := organizationPlanner{service: s, root: plan.root, templatePath: plan.TemplatePath, plan: p, seenBindings: map[string]bool{}, seenDirectories: map[string]string{}, sources: plan.proposalSources}
@@ -58,6 +47,7 @@ func (s *Service) planOrganization(ctx context.Context, req Request) (Plan, erro
 		return a < b
 	})
 	plan.organization = p
+	plan.proposalSources = nil
 	return plan, nil
 }
 

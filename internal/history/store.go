@@ -14,3 +14,8 @@ type Store interface {
 type PathIdentifier interface {
 	PathIdentifier(path string) (string, error)
 }
+
+type RunCatalog interface {
+	Runs() ([]Run, error)
+	FindRun(id string) (*Entry, error)
+}

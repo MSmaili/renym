@@ -93,7 +93,7 @@ func TestRenameRequestInputPresence(t *testing.T) {
 	}
 }
 
-func TestOrganizationCommandRequiresInputAndOnlyPreviews(t *testing.T) {
+func TestOrganizationCommandPreviewRequiresInputAndDoesNotMutate(t *testing.T) {
 	// Preview paths are canonicalized, including Windows short temp-directory
 	// aliases and macOS /var links. Build expected targets from the same origin.
 	base, err := filepath.EvalSymlinks(t.TempDir())
@@ -164,6 +164,7 @@ func TestRenamePlanOutput(t *testing.T) {
 		Selection:           templates.Selection{Kind: "files"},
 		SourcePath:          "input",
 		PreviewOnly:         true,
+		Organization:        true,
 		Overrides:           []string{"recursive"},
 		Matches:             []app.RuleMatch{{Path: source, RuleID: "all", Filename: true, Move: true, Index: 1}},
 		DirectoriesToCreate: []string{"output"},
@@ -177,7 +178,7 @@ func TestRenamePlanOutput(t *testing.T) {
 	want := "Template: policy.yaml (Organize)\n" +
 		"Selection: kind=files recursive=false ignore=[] no_default_ignore=false\n" +
 		"Source: input\n" +
-		"Organization preview only; move apply/undo are not available yet.\n" +
+		"Organization: regular-file moves; history required for apply.\n" +
 		"CLI overrides: recursive\n" +
 		"Rule all (filename+move, index=1): " + source + "\n" +
 		"Would create directory: output\n" +
@@ -199,7 +200,7 @@ func TestRenamePlanOutput(t *testing.T) {
 		{true, "\nNo organization changes planned\n"},
 	} {
 		output.Reset()
-		printEmptyRenamePlan(app.Plan{PreviewOnly: test.preview, Result: engine.PlanResult{
+		printEmptyRenamePlan(app.Plan{PreviewOnly: test.preview, Organization: test.preview, Result: engine.PlanResult{
 			Skipped: []engine.SkippedFile{{Path: source, Reason: "occupied target"}},
 		}})
 		if got := output.String(); got != test.want+"Skipped: "+source+" (occupied target)\n" {

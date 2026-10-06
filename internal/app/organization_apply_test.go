@@ -24,7 +24,8 @@ func organizationApplyFixture(t *testing.T, files ...string) (*Service, *history
 	put(t, policy, movePreset(output, "year/month"))
 	store := history.NewStore(t.TempDir(), fs.NewAdapter())
 	service := NewService(nil, store)
-	plan, err := service.planOrganization(context.Background(), Request{Path: input, TemplatePath: policy})
+	service.organizationEnabled = true
+	plan, err := service.Plan(context.Background(), Request{Path: input, TemplatePath: policy})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func TestInternalOrganizationJournaledRoundTrip(t *testing.T) {
 	service, store, plan, input, output := organizationApplyFixture(t, "one.txt", "two.txt")
 	plan.Result.Operations[0].NewPath = filepath.Join(input, "tampered.txt")
 	plan.DirectoriesToCreate = nil
-	result, err := service.executeOrganization(context.Background(), plan)
+	result, err := service.Execute(context.Background(), plan)
 	if err != nil || len(result.Execution.Completed) != 2 || len(result.DirectoriesCreated) != 3 || result.HistoryID == "" || result.RequiresReconciliation {
 		t.Fatalf("apply: %+v %v", result, err)
 	}
@@ -62,7 +63,7 @@ func TestInternalOrganizationJournaledRoundTrip(t *testing.T) {
 		t.Fatalf("run not discoverable from empty input: %+v %v", found, err)
 	}
 	before := *entry
-	preview, err := service.undoOrganization(context.Background(), input, true)
+	preview, err := service.Undo(context.Background(), input, true)
 	if err != nil || len(preview.Plan.Operations) != 2 {
 		t.Fatalf("undo preview: %+v %v", preview, err)
 	}
@@ -70,7 +71,7 @@ func TestInternalOrganizationJournaledRoundTrip(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(before, *after) {
 		t.Fatal("undo preview changed journal")
 	}
-	undone, err := service.undoOrganization(context.Background(), input, false)
+	undone, err := service.Undo(context.Background(), input, false)
 	if err != nil || len(undone.Execution.Completed) != 2 || len(undone.DirectoriesRemoved) != 3 {
 		t.Fatalf("undo: %+v %v", undone, err)
 	}
@@ -91,12 +92,12 @@ func TestInternalOrganizationJournaledRoundTrip(t *testing.T) {
 
 func TestInternalOrganizationKeepsPreexistingAndPopulatedDirectories(t *testing.T) {
 	service, store, plan, input, output := organizationApplyFixture(t, "one.txt")
-	result, err := service.executeOrganization(context.Background(), plan)
+	result, err := service.Execute(context.Background(), plan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	put(t, filepath.Join(output, "year/month/user.txt"), "user bytes")
-	undone, err := service.undoOrganization(context.Background(), input, false)
+	undone, err := service.Undo(context.Background(), input, false)
 	if err != nil || len(undone.DirectoriesRetained) != 3 || len(undone.DirectoriesRemoved) != 0 {
 		t.Fatalf("populated cleanup: %+v %v", undone, err)
 	}
@@ -105,15 +106,15 @@ func TestInternalOrganizationKeepsPreexistingAndPopulatedDirectories(t *testing.
 	if err != nil || len(entry.Organization.Retained) != 3 {
 		t.Fatal("retention reasons lost")
 	}
-	plan, err = service.planOrganization(context.Background(), plan.request)
+	plan, err = service.Plan(context.Background(), plan.request)
 	if err != nil || len(plan.organization.directories) != 0 {
 		t.Fatalf("existing directories adopted: %v", err)
 	}
-	result, err = service.executeOrganization(context.Background(), plan)
+	result, err = service.Execute(context.Background(), plan)
 	if err != nil || len(result.DirectoriesCreated) != 0 {
 		t.Fatalf("preexisting apply: %+v %v", result, err)
 	}
-	undone, err = service.undoOrganization(context.Background(), input, false)
+	undone, err = service.Undo(context.Background(), input, false)
 	if err != nil || len(undone.DirectoriesRemoved) != 0 {
 		t.Fatal("preexisting directory removed")
 	}
@@ -145,7 +146,7 @@ func TestInternalOrganizationRequiresHistoryAndValidatesBeforeCreation(t *testin
 			case "save-error":
 				service.store = &faultStore{Store: store, saveErr: errors.New("intent failure")}
 			}
-			result, err := service.executeOrganization(context.Background(), plan)
+			result, err := service.Execute(context.Background(), plan)
 			if err == nil || len(result.Execution.Completed) != 0 || len(result.DirectoriesCreated) != 0 {
 				t.Fatalf("invalid apply mutated: %+v %v", result, err)
 			}
@@ -168,7 +169,7 @@ func TestInternalOrganizationDirectoryOnlyPartialRunCanUndo(t *testing.T) {
 		}
 		return nil
 	}}
-	result, err := service.executeOrganization(ctx, plan)
+	result, err := service.Execute(ctx, plan)
 	if !errors.Is(err, context.Canceled) || len(result.DirectoriesCreated) != 1 || len(result.Execution.Completed) != 0 || result.RequiresReconciliation {
 		t.Fatalf("directory-only partial: %+v %v", result, err)
 	}
@@ -177,7 +178,7 @@ func TestInternalOrganizationDirectoryOnlyPartialRunCanUndo(t *testing.T) {
 		t.Fatalf("partial ownership lost: %+v %v", entry, err)
 	}
 	service.store = store
-	undone, err := service.undoOrganization(context.Background(), input, false)
+	undone, err := service.Undo(context.Background(), input, false)
 	if err != nil || len(undone.DirectoriesRemoved) != 1 {
 		t.Fatalf("directory-only undo: %+v %v", undone, err)
 	}
@@ -199,7 +200,7 @@ func TestInternalOrganizationCheckpointFailureStopsAndRefusesReplay(t *testing.T
 				}
 				return nil
 			}}
-			result, err := service.executeOrganization(context.Background(), plan)
+			result, err := service.Execute(context.Background(), plan)
 			if err == nil || !result.RequiresReconciliation {
 				t.Fatalf("checkpoint failure hidden: %+v %v", result, err)
 			}
@@ -208,7 +209,7 @@ func TestInternalOrganizationCheckpointFailureStopsAndRefusesReplay(t *testing.T
 				t.Fatalf("uncertain run finalized: %+v %v", entry, err)
 			}
 			service.store = store
-			if _, err := service.undoOrganization(context.Background(), input, false); err == nil {
+			if _, err := service.Undo(context.Background(), input, false); err == nil {
 				t.Fatal("uncertain run automatically undone")
 			}
 			switch boundary {
@@ -238,13 +239,13 @@ func TestInternalOrganizationPartialMoveAndUndoConflictResume(t *testing.T) {
 		}
 		return nil
 	}}
-	result, err := service.executeOrganization(context.Background(), plan)
+	result, err := service.Execute(context.Background(), plan)
 	if !errors.Is(err, fs.ErrStalePlan) || len(result.Execution.Completed) != 1 || result.RequiresReconciliation {
 		t.Fatalf("partial move: %+v %v", result, err)
 	}
 	service.store = store
 	put(t, filepath.Join(input, "one.txt"), "new arrival")
-	undo, err := service.undoOrganization(context.Background(), input, false)
+	undo, err := service.Undo(context.Background(), input, false)
 	if err == nil || len(undo.Execution.Completed) != 0 {
 		t.Fatalf("undo overwrite: %+v %v", undo, err)
 	}
@@ -256,7 +257,7 @@ func TestInternalOrganizationPartialMoveAndUndoConflictResume(t *testing.T) {
 	if err := os.Rename(filepath.Join(input, "one.txt"), filepath.Join(input, "arrival.txt")); err != nil {
 		t.Fatal(err)
 	}
-	undo, err = service.undoOrganization(context.Background(), input, false)
+	undo, err = service.Undo(context.Background(), input, false)
 	if err != nil || len(undo.Execution.Completed) != 1 {
 		t.Fatalf("resume undo: %+v %v", undo, err)
 	}
@@ -295,18 +296,19 @@ id='remaining'
 filename='three-renamed.md'
 `, output, second))
 	service := NewService(nil, history.NewStore(t.TempDir(), fs.NewAdapter()))
-	plan, err := service.planOrganization(context.Background(), Request{Path: input, TemplatePath: policy})
+	service.organizationEnabled = true
+	plan, err := service.Plan(context.Background(), Request{Path: input, TemplatePath: policy})
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := service.executeOrganization(context.Background(), plan)
+	result, err := service.Execute(context.Background(), plan)
 	if err != nil || len(result.Execution.Completed) != 3 {
 		t.Fatalf("mixed: %+v %v", result, err)
 	}
 	requireFileBytes(t, filepath.Join(output, "nested/renamed.txt"), "one")
 	requireFileBytes(t, filepath.Join(second, "two.png"), "two")
 	requireFileBytes(t, filepath.Join(input, "three-renamed.md"), "three")
-	if _, err := service.undoOrganization(context.Background(), input, false); err != nil {
+	if _, err := service.Undo(context.Background(), input, false); err != nil {
 		t.Fatal(err)
 	}
 	requireFileBytes(t, filepath.Join(input, "one.txt"), "one")
@@ -318,7 +320,7 @@ func TestInternalOrganizationUndoCheckpointFailuresNeverReplay(t *testing.T) {
 	for _, boundary := range []string{"before-move", "after-move", "before-cleanup", "after-cleanup"} {
 		t.Run(boundary, func(t *testing.T) {
 			service, store, plan, input, _ := organizationApplyFixture(t, "one.txt")
-			if _, err := service.executeOrganization(context.Background(), plan); err != nil {
+			if _, err := service.Execute(context.Background(), plan); err != nil {
 				t.Fatal(err)
 			}
 			service.store = &faultStore{Store: store, hook: func(entry history.Entry) error {
@@ -332,7 +334,7 @@ func TestInternalOrganizationUndoCheckpointFailuresNeverReplay(t *testing.T) {
 				}
 				return nil
 			}}
-			result, err := service.undoOrganization(context.Background(), input, false)
+			result, err := service.Undo(context.Background(), input, false)
 			if err == nil || !result.RequiresReconciliation {
 				t.Fatalf("undo checkpoint uncertainty hidden: %+v %v", result, err)
 			}
@@ -341,7 +343,7 @@ func TestInternalOrganizationUndoCheckpointFailuresNeverReplay(t *testing.T) {
 				t.Fatalf("uncertain undo finalized: %+v %v", entry, err)
 			}
 			service.store = store
-			if _, err := service.undoOrganization(context.Background(), input, false); err == nil {
+			if _, err := service.Undo(context.Background(), input, false); err == nil {
 				t.Fatal("uncertain undo automatically resumed")
 			}
 			if boundary == "after-move" && len(result.Execution.Completed) != 1 {
@@ -364,7 +366,7 @@ func TestInternalOrganizationCleanupKeepsReplacement(t *testing.T) {
 		}
 		return nil
 	}}
-	if _, err := service.executeOrganization(ctx, plan); !errors.Is(err, context.Canceled) {
+	if _, err := service.Execute(ctx, plan); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
 	if err := os.Rename(output, output+"-owned"); err != nil {
@@ -374,7 +376,7 @@ func TestInternalOrganizationCleanupKeepsReplacement(t *testing.T) {
 		t.Fatal(err)
 	}
 	service.store = store
-	result, err := service.undoOrganization(context.Background(), input, false)
+	result, err := service.Undo(context.Background(), input, false)
 	if err != nil || len(result.DirectoriesRemoved) != 0 || len(result.DirectoriesRetained) != 1 {
 		t.Fatalf("replacement cleanup: %+v %v", result, err)
 	}
@@ -388,12 +390,12 @@ func TestInternalOrganizationCleanupKeepsReplacement(t *testing.T) {
 
 func TestInternalOrganizationUndoRefusesChangedFileAndMalformedRecords(t *testing.T) {
 	service, store, plan, input, output := organizationApplyFixture(t, "one.txt")
-	result, err := service.executeOrganization(context.Background(), plan)
+	result, err := service.Execute(context.Background(), plan)
 	if err != nil {
 		t.Fatal(err)
 	}
 	put(t, filepath.Join(output, "year/month/one.txt"), "new destination bytes")
-	if _, err := service.undoOrganization(context.Background(), input, true); !errors.Is(err, fs.ErrStalePlan) {
+	if _, err := service.Undo(context.Background(), input, true); !errors.Is(err, fs.ErrStalePlan) {
 		t.Fatalf("changed target accepted: %v", err)
 	}
 	entry, err := store.FindRun(result.HistoryID)
@@ -404,7 +406,7 @@ func TestInternalOrganizationUndoRefusesChangedFileAndMalformedRecords(t *testin
 	if err := store.Update(input, entry.ID, *entry); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.undoOrganization(context.Background(), input, false); err == nil {
+	if _, err := service.Undo(context.Background(), input, false); err == nil {
 		t.Fatal("malformed relative path accepted")
 	}
 	requireFileBytes(t, filepath.Join(output, "year/month/one.txt"), "new destination bytes")
@@ -412,6 +414,12 @@ func TestInternalOrganizationUndoRefusesChangedFileAndMalformedRecords(t *testin
 
 func TestOrganizationBindingNeverRecapturesRenderedSourceVersion(t *testing.T) {
 	service, _, plan, input, _ := organizationApplyFixture(t, "one.txt")
+	request := plan.request
+	request.DryRun = true
+	plan, err := service.Plan(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
 	put(t, filepath.Join(input, "one.txt"), "changed after filename rendering")
 	planner := organizationPlanner{service: service, root: input, plan: &organizationPlan{source: cloneValue(plan.sourceDirectory)}, sources: plan.proposalSources, seenBindings: map[string]bool{}, seenDirectories: map[string]string{}}
 	if err := planner.addStep(context.Background(), plan.Result.Operations[0], 1); !errors.Is(err, fs.ErrStalePlan) {

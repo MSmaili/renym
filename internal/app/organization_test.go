@@ -37,7 +37,7 @@ func movePreset(root, directory string) string {
 	return result
 }
 
-func TestOrganizationPreviewIsReadOnlyAndApplyIsBlocked(t *testing.T) {
+func TestOrganizationPreviewIsReadOnlyAndCannotBeConvertedToApply(t *testing.T) {
 	input, output, policy := organizationFixture(t)
 	put(t, filepath.Join(input, "Screenshot One.PNG"), "image bytes")
 	put(t, filepath.Join(input, "Notes.txt"), "document bytes")
@@ -95,11 +95,9 @@ mode='snake'
 		}
 	}
 	req.DryRun = false
-	for _, skipHistory := range []bool{false, true} {
-		req.SkipHistory = skipHistory
-		if _, err := service.Rename(context.Background(), req); !errors.Is(err, ErrOrganizationPreviewOnly) {
-			t.Fatalf("move apply was enabled: %v", err)
-		}
+	req.SkipHistory = true
+	if _, err := service.Rename(context.Background(), req); !errors.Is(err, ErrOrganizationHistoryRequired) {
+		t.Fatalf("history bypass: %v", err)
 	}
 	plan.PreviewOnly = false // Editing presentation must not enable mutation.
 	plan.request.DryRun = false

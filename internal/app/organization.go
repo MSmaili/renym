@@ -11,7 +11,8 @@ import (
 	"github.com/MSmaili/renym/internal/templates"
 )
 
-var ErrOrganizationPreviewOnly = errors.New("organization currently supports preview only; use --dry-run (move apply/undo safeguards are not implemented yet)")
+var ErrOrganizationPreviewOnly = errors.New("organization apply/undo remains gated pending native CLI acceptance; use --dry-run (read-only plans cannot be converted to apply)")
+var ErrOrganizationHistoryRequired = errors.New("organization requires history; --skip-history is unsupported for apply")
 
 type organizationPreview struct{ destinations map[string]destinationPreview }
 type destinationPreview struct{ root, anchor, volume string }

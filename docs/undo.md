@@ -23,7 +23,9 @@ Undo works only if:
 | Command           | Description                                                    |
 | ----------------- | -------------------------------------------------------------- |
 | `renym undo`        | Undo the most recent rename operation in the current directory |
-| `renym undo <path>` | Undo rename operations for a specific path                     |
+| `renym undo --path <folder>` | Undo the latest eligible run for an input folder |
+| `renym undo --run <id>` | Select the latest eligible run by ID from `renym history` |
+| `renym undo --path <folder> --dry-run` | Preview without changing files or journals |
 
 ---
 
@@ -32,5 +34,8 @@ Undo works only if:
 - Undo operates only on recorded history.
 - Deleting history disables undo for the affected operations.
 - History files are stored in JSON format.
+- `--path` and `--run` are mutually exclusive; positional paths are not accepted.
+- Run-ID selection requires a live original input folder and cannot bypass newer or uncertain runs.
+- Organization apply/undo remains [gated](organization.md); its previews report cleanup candidates, not promises of removal. Organization undo audits are retained rather than deleted.
 
 ---

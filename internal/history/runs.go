@@ -11,16 +11,19 @@ import (
 )
 
 type Run struct {
-	ID            string    `json:"id"`
-	Path          string    `json:"path"`
-	State         string    `json:"state"`
-	SchemaVersion int       `json:"schema_version"`
-	Timestamp     time.Time `json:"timestamp"`
-	Completed     int       `json:"completed"`
-	Undone        int       `json:"undone"`
-	Directories   int       `json:"directories"`
-	Cleaned       int       `json:"cleaned"`
-	Error         string    `json:"error,omitempty"`
+	ID                     string    `json:"id"`
+	Path                   string    `json:"path"`
+	State                  string    `json:"state"`
+	SchemaVersion          int       `json:"schema_version"`
+	Timestamp              time.Time `json:"timestamp"`
+	Completed              int       `json:"completed"`
+	Undone                 int       `json:"undone"`
+	Directories            int       `json:"directories"`
+	Cleaned                int       `json:"cleaned"`
+	Error                  string    `json:"error,omitempty"`
+	RetainedDirectories    int       `json:"retained_directories"`
+	ActiveAction           string    `json:"active_action,omitempty"`
+	RequiresReconciliation bool      `json:"requires_reconciliation"`
 }
 
 // Runs discovers journals independently of files still occupying their input folder.
@@ -34,8 +37,14 @@ func (s *GlobalStore) Runs() ([]Run, error) {
 		} else {
 			run.Path, run.State, run.SchemaVersion, run.Timestamp = entry.Path, entry.State, entry.SchemaVersion, entry.Timestamp
 			run.Completed, run.Undone = len(entry.Operations), entry.Undone
+			run.RequiresReconciliation = entry.State == Pending || entry.State == Undoing || entry.SchemaVersion != 0 && !VerifiedVersion(entry.SchemaVersion)
 			if entry.Organization != nil {
 				run.Directories, run.Cleaned = len(entry.Organization.Directories), entry.Organization.Cleaned
+				run.RetainedDirectories = len(entry.Organization.Retained)
+				if entry.Organization.Active != nil {
+					run.ActiveAction = entry.Organization.Active.Action
+					run.RequiresReconciliation = true
+				}
 			}
 		}
 		runs = append(runs, run)

@@ -20,15 +20,16 @@ import (
 )
 
 type Service struct {
-	adapter fs.FileSystemAdapter
-	store   history.Store
+	adapter             fs.FileSystemAdapter
+	store               history.Store
+	organizationEnabled bool
 }
 
 func NewService(adapter fs.FileSystemAdapter, store history.Store) *Service {
 	if adapter == nil {
 		adapter = fs.NewAdapter()
 	}
-	return &Service{adapter: adapter, store: store}
+	return &Service{adapter: adapter, store: store, organizationEnabled: organizationApplyEnabled}
 }
 
 func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
@@ -38,6 +39,9 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	req, compiled, overrides, err := prepareRequest(req)
 	if err != nil {
 		return Plan{}, err
+	}
+	if compiled != nil && compiled.HasMoves() && !req.DryRun && !s.organizationEnabled {
+		return Plan{}, ErrOrganizationPreviewOnly
 	}
 	matchIgnore := filepath.Match
 	if compiled != nil {
@@ -119,7 +123,7 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	// Rule evaluation order is lexical and independent of physical execution
 	// depth. Matching always uses original names/kinds, never proposed targets.
 	sort.SliceStable(paths, func(i, j int) bool { return filepath.ToSlash(paths[i]) < filepath.ToSlash(paths[j]) })
-	plan := Plan{root: root, request: req, Overrides: overrides, SourcePath: path, PreviewOnly: organization != nil, previewOnly: organization != nil}
+	plan := Plan{root: root, request: req, Overrides: overrides, SourcePath: path, Organization: organization != nil, PreviewOnly: organization != nil && req.DryRun, previewOnly: organization != nil && req.DryRun}
 	plan.sourceDirectory = sourceDirectory
 	targets, reasons := make(map[string]string, len(paths)), make(map[string]string)
 	missing := make(map[string][]string)
@@ -249,7 +253,7 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 		plan.Selection = templates.Selection{Kind: kind, Recursive: req.Recursive, Ignore: append([]string(nil), req.Ignore...), NoDefaultIgnore: req.NoDefaultIgnore}
 	}
 	plan.Result.Operations = append([]engine.RenameOp(nil), result.Operations...)
-	if plan.previewOnly {
+	if organization != nil {
 		plan.proposalSources = make(map[string]fs.Snapshot, len(result.Operations))
 	}
 	for _, op := range result.Operations {
@@ -257,11 +261,14 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 			return Plan{}, err
 		}
 		snapshot := snapshots[op.OldPath]
-		if !plan.previewOnly {
+		if organization == nil {
 			plan.operations = append(plan.operations, fs.RenameOp{ID: len(plan.operations) + 1, OldPath: op.OldPath, NewPath: op.NewPath, Source: snapshot})
 		} else {
 			plan.proposalSources[op.OldPath] = *snapshot
 		}
+	}
+	if organization != nil && !req.DryRun {
+		return s.bindOrganizationPlan(ctx, plan)
 	}
 	return plan, nil
 }
@@ -275,14 +282,23 @@ func (s *Service) Rename(ctx context.Context, req Request) (Result, error) {
 }
 
 func (s *Service) Execute(ctx context.Context, plan Plan) (Result, error) {
-	result := Result{Plan: plan.Result}
+	result := Result{Plan: plan.Result, Organization: plan.sourceDirectory != nil, SourcePath: plan.root}
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
 	if plan.previewOnly && !plan.request.DryRun {
 		return result, ErrOrganizationPreviewOnly
 	}
-	if plan.request.DryRun || len(plan.operations) == 0 {
+	if plan.request.DryRun {
+		return result, nil
+	}
+	if plan.sourceDirectory != nil {
+		if !s.organizationEnabled {
+			return result, ErrOrganizationPreviewOnly
+		}
+		return s.executeOrganization(ctx, plan)
+	}
+	if len(plan.operations) == 0 {
 		return result, nil
 	}
 	if plan.root == "" {
@@ -305,8 +321,8 @@ func (s *Service) Execute(ctx context.Context, plan Plan) (Result, error) {
 	if err != nil && !errors.Is(err, history.ErrNoHistory) {
 		return result, fmt.Errorf("check existing history: %w", err)
 	}
-	if latest != nil && latest.SchemaVersion != 0 && (latest.SchemaVersion != history.SchemaVersion || latest.State != history.Complete && latest.State != history.Partial) {
-		return result, errors.New("existing history requires reconciliation or completion of undo before another rename")
+	if err := readyForNewRun(latest); err != nil {
+		return result, err
 	}
 	entry := history.Entry{
 		SchemaVersion: history.SchemaVersion, State: history.Pending, Timestamp: time.Now().UTC(),
@@ -376,6 +392,10 @@ func (s *Service) Undo(ctx context.Context, root string, dryRun bool) (Result, e
 	}
 	if entry == nil {
 		return result, errors.New("missing history entry")
+	}
+	result.HistoryID, result.SourcePath = entry.ID, entry.Path
+	if entry.SchemaVersion == history.OrganizationSchemaVersion {
+		return s.undoOrganizationEntry(ctx, dryRun, entry)
 	}
 	if entry.SchemaVersion != history.SchemaVersion {
 		return result, errors.New("legacy or unsupported history contains unverified plans; refusing automatic undo")

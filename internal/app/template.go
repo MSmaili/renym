@@ -34,8 +34,8 @@ func prepareRequest(req Request) (Request, *templates.Compiled, []string, error)
 		}
 		req.Path = "."
 	}
-	if compiled.HasMoves() && !req.DryRun {
-		return req, nil, nil, ErrOrganizationPreviewOnly
+	if compiled.HasMoves() && !req.DryRun && req.SkipHistory {
+		return req, nil, nil, ErrOrganizationHistoryRequired
 	}
 	selection := compiled.Selection()
 	var overrides []string

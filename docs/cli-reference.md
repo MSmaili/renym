@@ -10,7 +10,7 @@ All flags, commands, and defaults listed here reflect current CLI behavior.
 | Form                   | Description                                                |
 | ---------------------- | ---------------------------------------------------------- |
 | `renym [flags]`          | Run a rename operation using flags                         |
-| `renym [command]`        | Run a subcommand (`help`, `version`, `undo`, `completion`) |
+| `renym [command]`        | Run a subcommand (`help`, `version`, `template`, `history`, `undo`, `completion`) |
 | `renym [command] --help` | Show help for a specific subcommand                        |
 
 ---
@@ -74,6 +74,12 @@ For detailed behavior rules and directory interactions, see [Modes](modes.md).
 ---
 
 ## Notes
+
+`renym history` lists saved run IDs and recovery states. `renym undo` defaults
+to the current directory; select a different input with `--path <folder>` or
+its latest eligible run with `--run <id>` (mutually exclusive). Both support
+`--dry-run`. Positional undo paths are not accepted. Organization mutation
+remains gated pending native CLI acceptance.
 
 - If conflicting flags are provided, Renym applies deterministic precedence.
 - Flags not listed here are not part of the public CLI interface.

@@ -22,7 +22,7 @@ type organizationRun struct {
 }
 
 func (s *Service) executeOrganization(ctx context.Context, plan Plan) (Result, error) {
-	result := Result{Plan: plan.Result}
+	result := Result{Plan: plan.Result, Organization: true, SourcePath: plan.root}
 	if plan.organization == nil {
 		return result, errors.New("missing rooted organization plan")
 	}
@@ -30,7 +30,7 @@ func (s *Service) executeOrganization(ctx context.Context, plan Plan) (Result, e
 		return result, nil
 	}
 	if plan.request.SkipHistory || s.store == nil {
-		return result, errors.New("organization requires history; skip-history is unsupported")
+		return result, ErrOrganizationHistoryRequired
 	}
 	p := plan.organization
 	if err := s.checkOrganizationPlan(ctx, plan); err != nil {
@@ -52,13 +52,8 @@ func (s *Service) beginOrganizationRun(plan Plan, result Result) (*organizationR
 	if err != nil && !errors.Is(err, history.ErrNoHistory) {
 		return nil, err
 	}
-	if latest != nil && latest.SchemaVersion != 0 && (!history.VerifiedVersion(latest.SchemaVersion) || latest.State != history.Complete && latest.State != history.Partial) {
-		return nil, errors.New("existing history requires reconciliation or completion of undo")
-	}
-	if latest != nil && latest.SchemaVersion == history.OrganizationSchemaVersion {
-		if err := validateOrganizationJournal(latest); err != nil {
-			return nil, err
-		}
+	if err := readyForNewRun(latest); err != nil {
+		return nil, err
 	}
 	run := &organizationRun{service: s, root: plan.root, result: result, entry: history.Entry{
 		SchemaVersion: history.OrganizationSchemaVersion, State: history.Pending, Timestamp: time.Now().UTC(), Command: plan.request.Command, Version: plan.request.Version,

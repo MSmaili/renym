@@ -111,13 +111,16 @@ func runRename(cmd *cobra.Command, args []string) error {
 
 	log.Debug("Processing %d file(s)...\n", len(plan.Result.Operations))
 	result, err := service.Execute(cmd.Context(), plan)
+	if result.Organization && !cfg.DryRun {
+		printOrganizationOutcome(result, err != nil)
+	}
 	if err != nil {
-		return fmt.Errorf("rename failed after %d completed operation(s): %w", len(result.Execution.Completed), err)
+		return applicationFailure("rename", result, err)
 	}
 	if cfg.DryRun {
 		printRenamePreview(plan)
 	}
-	printResults(plan.Result, cfg.DryRun)
+	printPlanResults(plan.Result, cfg.DryRun, plan.Organization)
 	return nil
 }
 
@@ -174,8 +177,8 @@ func printTemplatePlan(plan app.Plan) {
 	}
 	log.Info("\nSelection: kind=%s recursive=%t ignore=%v no_default_ignore=%t\n", plan.Selection.Kind, plan.Selection.Recursive, plan.Selection.Ignore, plan.Selection.NoDefaultIgnore)
 	log.Info("Source: %s\n", plan.SourcePath)
-	if plan.PreviewOnly {
-		log.Info("Organization preview only; move apply/undo are not available yet.\n")
+	if plan.Organization {
+		log.Info("Organization: regular-file moves; history required for apply.\n")
 	}
 	if len(plan.Overrides) > 0 {
 		log.Info("CLI overrides: %s\n", strings.Join(plan.Overrides, ", "))
@@ -200,8 +203,9 @@ func ruleActionLabel(match app.RuleMatch) string {
 }
 
 func printEmptyRenamePlan(plan app.Plan) {
-	if plan.PreviewOnly {
+	if plan.Organization {
 		log.Info("\nNo organization changes planned\n")
+		printCollisions(plan.Result.Collisions)
 	} else {
 		log.Info("\n✓ No files to rename\n")
 	}
@@ -248,18 +252,15 @@ func templateSelectionOverrides(cmd *cobra.Command) app.SelectionOverrides {
 }
 
 func printResults(result engine.PlanResult, dryRun bool) {
+	printPlanResults(result, dryRun, false)
+}
+
+func printPlanResults(result engine.PlanResult, dryRun, organization bool) {
 	separator := strings.Repeat("=", 60)
-	thinSeparator := strings.Repeat("-", 60)
 
 	// Success header
 	log.Info("\n%s\n", separator)
-	if dryRun {
-		log.Info("  DRY RUN - No files were actually renamed\n")
-	} else {
-		log.Info("  ✓ COMPLETED SUCCESSFULLY\n")
-		log.Info("%s\n", separator)
-		log.Info("  Files renamed:   %d\n", len(result.Operations))
-	}
+	printCompletionHeader(len(result.Operations), dryRun, organization, separator)
 
 	// Show warnings if any
 	if len(result.Skipped) > 0 {
@@ -270,23 +271,43 @@ func printResults(result engine.PlanResult, dryRun bool) {
 	}
 	log.Info("%s\n", separator)
 
-	// Show collision details
-	if len(result.Collisions) > 0 {
+	printCollisions(result.Collisions)
+	printSkipped(result.Skipped)
+	log.Info("\n")
+}
+
+func printCollisions(collisions []engine.Collision) {
+	thinSeparator := strings.Repeat("-", 60)
+	if len(collisions) > 0 {
 		log.Info("\n⚠ COLLISIONS:\n")
 		log.Info("%s\n", thinSeparator)
-		for i, collision := range result.Collisions {
+		for i, collision := range collisions {
 			log.Info("  %d. Multiple files trying to rename to:\n", i+1)
 			log.Info("     → %s\n", collision.Target)
 			log.Info("     Sources: %s, %s\n", filepath.Base(collision.Source1), filepath.Base(collision.Source2))
-			if i < len(result.Collisions)-1 {
+			if i < len(collisions)-1 {
 				log.Info("\n")
 			}
 		}
 		log.Info("%s\n", thinSeparator)
 	}
+}
 
-	printSkipped(result.Skipped)
-	log.Info("\n")
+func printCompletionHeader(count int, dryRun, organization bool, separator string) {
+	if dryRun {
+		if organization {
+			log.Info("  DRY RUN - No files or directories were changed\n")
+		} else {
+			log.Info("  DRY RUN - No files were actually renamed\n")
+		}
+		return
+	}
+	log.Info("  ✓ COMPLETED SUCCESSFULLY\n%s\n", separator)
+	if organization {
+		log.Info("  Files organized: %d\n", count)
+	} else {
+		log.Info("  Files renamed:   %d\n", count)
+	}
 }
 
 func printSkipped(skipped []engine.SkippedFile) {

@@ -53,6 +53,7 @@ type Plan struct {
 	Matches             []RuleMatch
 	SourcePath          string
 	PreviewOnly         bool
+	Organization        bool
 	DirectoriesToCreate []string
 	previewOnly         bool
 	operations          []fs.RenameOp
@@ -65,13 +66,16 @@ type Plan struct {
 }
 
 type Result struct {
-	Plan                   engine.PlanResult
-	Execution              fs.Result
-	HistoryID              string
-	DirectoriesCreated     []fs.OwnedDirectory
-	DirectoriesRemoved     []fs.OwnedDirectory
-	DirectoriesRetained    []history.DirectoryRetention
-	RequiresReconciliation bool
-	MoveOutcomes           []fs.MoveOutcome
-	DirectoryOutcomes      []fs.DirectoryOutcome
+	Organization               bool
+	SourcePath                 string
+	Plan                       engine.PlanResult
+	Execution                  fs.Result
+	HistoryID                  string
+	DirectoriesCreated         []fs.OwnedDirectory
+	DirectoriesRemoved         []fs.OwnedDirectory
+	DirectoriesRetained        []history.DirectoryRetention
+	RequiresReconciliation     bool
+	MoveOutcomes               []fs.MoveOutcome
+	DirectoryOutcomes          []fs.DirectoryOutcome
+	DirectoryCleanupCandidates []string
 }

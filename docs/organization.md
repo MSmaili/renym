@@ -2,10 +2,11 @@
 
 Templates describe reusable rules and per-rule destinations; the invocation
 selects the input folder. **Moving and
-move undo are not available yet.** Any template containing a move rule requires
+move undo remain gated pending native CLI acceptance.** Any template containing a move rule requires
 `--dry-run`; without it, the entire workflow fails before discovery/mutation,
 including rename-only rules in that same template. `--skip-history` cannot bypass
-this gate. These previews are an incremental Phase 2 slice, not completed moves.
+this gate. The journaled workflow is integrated for acceptance testing, but ordinary
+builds remain read-only for moves. Watching and later phases are still deferred.
 
 ```sh
 renym template validate ./examples/templates/organization-preview.toml
@@ -78,8 +79,26 @@ source/destination filesystem identity mismatches and mount crossings are skippe
 linked/non-directory destination descendants are rejected. Active template/history
 paths remain protected, including ordinary aliases of not-yet-created history paths.
 
-**These read-only checks are not a race-resistant mutation containment protocol.**
-The next slice must pin and revalidate root/parent handles, perform native rooted
-no-replace moves, journal owned directory identities and completed steps, and
-implement truthful partial outcomes plus undo before apply can be enabled. No
-cross-volume copy/delete, watcher, daemon, or automatic application is introduced.
+**Read-only checks do not guarantee a later mutation will succeed.** The integrated
+workflow pins and revalidates root/parent handles, uses native rooted no-replace
+moves, and journals directory ownership and verified completion. Public mutation
+remains gated until the integrated workflow passes native CLI acceptance.
+
+## Journals and undo
+
+`renym history` discovers saved runs by stable ID, even when the input folder is
+empty or missing. `renym undo --path <original-folder> --dry-run` and
+`renym undo --run <id> --dry-run` preview eligible undo steps and owned-directory
+cleanup checks. Run-ID selection cannot skip a newer run or uncertain intent;
+actual undo still requires a live, unchanged original input folder.
+
+Organization uses schema-2 journals, distinct from schema-1 rename history.
+These records are retained indefinitely, including successful undo audits and
+reasons for preserving non-empty, missing or replaced directories. Only
+verified owned empty directories are eligible for removal, after file reversal.
+There is no automatic reconciliation: attempted unverified mutations or failed
+checkpoints block automatic replay. Never blindly retry such a run.
+
+The underlying workflow supports trusted local directories and one writer,
+not hostile namespace changes, atomic batches or cross-volume copy/delete.
+Snapshots compare identity, mode, size and modification time, not content hashes.

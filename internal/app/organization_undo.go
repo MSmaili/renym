@@ -11,25 +11,27 @@ import (
 	"github.com/MSmaili/renym/internal/history"
 )
 
-func (s *Service) undoOrganization(ctx context.Context, root string, dryRun bool) (Result, error) {
-	if s.store == nil {
-		return Result{}, errors.New("history is required for organization undo")
-	}
-	entry, err := s.store.Latest(root)
-	if err != nil {
-		return Result{}, err
-	}
+func (s *Service) undoOrganizationEntry(ctx context.Context, dryRun bool, entry *history.Entry) (Result, error) {
+	result := Result{Organization: true, SourcePath: entry.Path, HistoryID: entry.ID}
 	if err := validateOrganizationJournal(entry); err != nil {
-		return Result{}, err
+		result.RequiresReconciliation = entry.State == history.Pending || entry.State == history.Undoing || entry.Organization != nil && entry.Organization.Active != nil
+		return result, err
 	}
-	run := organizationRun{service: s, root: root, entry: *entry, result: Result{HistoryID: entry.ID}}
+	if _, err := fs.InspectDirectory(ctx, fs.DirectoryRequest{Root: entry.Organization.SourceRoot, RootSnapshot: entry.Organization.SourceSnapshot}); err != nil {
+		return result, err
+	}
+	run := organizationRun{service: s, root: entry.Organization.SourceRoot, entry: *entry, result: result}
 	steps := entry.Operations[:len(entry.Operations)-entry.Undone]
 	for i := len(steps) - 1; i >= 0; i-- {
 		step := steps[i]
 		run.result.Plan.Operations = append(run.result.Plan.Operations, engine.RenameOp{OldPath: step.New, NewPath: step.Old})
 	}
 	if dryRun {
+		run.result.DirectoryCleanupCandidates = organizationCleanupCandidates(entry.Organization)
 		return run.result, run.previewOrganizationUndo(ctx, steps)
+	}
+	if !s.organizationEnabled {
+		return run.result, ErrOrganizationPreviewOnly
 	}
 	if err := ctx.Err(); err != nil {
 		return run.result, err
@@ -38,6 +40,16 @@ func (s *Service) undoOrganization(ctx context.Context, root string, dryRun bool
 	if err := run.checkpoint(); err != nil {
 		return run.result, err
 	}
+	if err := run.reverseFiles(ctx, steps); err != nil {
+		return run.finishUndo(err)
+	}
+	if err := run.cleanupDirectories(ctx); err != nil {
+		return run.finishUndo(err)
+	}
+	return run.finishUndo(nil)
+}
+
+func (run *organizationRun) reverseFiles(ctx context.Context, steps []history.Operation) error {
 	for i := len(steps) - 1; i >= 0; i-- {
 		if err := run.reverseMove(ctx, steps[i]); err != nil {
 			step := steps[i]
@@ -47,13 +59,18 @@ func (s *Service) undoOrganization(ctx context.Context, root string, dryRun bool
 				remaining := steps[j]
 				run.result.Execution.Unattempted = append(run.result.Execution.Unattempted, fs.RenameOp{ID: remaining.ID, OldPath: remaining.New, NewPath: remaining.Old, Source: remaining.Source})
 			}
-			return run.finishUndo(err)
+			return err
 		}
 	}
-	if err := run.cleanupDirectories(ctx); err != nil {
-		return run.finishUndo(err)
+	return nil
+}
+
+func organizationCleanupCandidates(org *history.Organization) []string {
+	var paths []string
+	for i := len(org.Directories) - org.Cleaned - 1; i >= 0; i-- {
+		paths = append(paths, directoryPath(org.Directories[i].DirectoryRequest))
 	}
-	return run.finishUndo(nil)
+	return paths
 }
 
 func validateOrganizationJournal(entry *history.Entry) error {
@@ -64,7 +81,7 @@ func validateOrganizationJournal(entry *history.Entry) error {
 	if entry.State != history.Complete && entry.State != history.Partial && entry.State != history.PartialUndo || org.Active != nil {
 		return errors.New("organization journal requires reconciliation")
 	}
-	if entry.Undone < 0 || entry.Undone > len(entry.Operations) || org.Cleaned < 0 || org.Cleaned > len(org.Directories) || !filepath.IsAbs(org.SourceRoot) || org.SourceSnapshot == nil || org.SourceSnapshot.Identity == "" || !org.SourceSnapshot.Mode.IsDir() || len(org.Bindings) == 0 {
+	if entry.Undone < 0 || entry.Undone > len(entry.Operations) || org.Cleaned < 0 || org.Cleaned > len(org.Directories) || !validOrganizationOrigin(entry) || len(org.Bindings) == 0 {
 		return errors.New("invalid organization journal")
 	}
 	for _, step := range entry.Operations {
@@ -78,6 +95,11 @@ func validateOrganizationJournal(entry *history.Entry) error {
 		}
 	}
 	return nil
+}
+
+func validOrganizationOrigin(entry *history.Entry) bool {
+	org := entry.Organization
+	return filepath.IsAbs(org.SourceRoot) && filepath.Clean(org.SourceRoot) == org.SourceRoot && org.SourceRoot == entry.Path && verifiedDirectorySnapshot(org.SourceSnapshot) && org.SourceSnapshot.Identity == entry.DirID
 }
 
 func validateOwnedDirectory(owned fs.OwnedDirectory) error {

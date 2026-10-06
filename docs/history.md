@@ -14,7 +14,7 @@ History files are stored locally per operating system:
 | ------- | ------------------------------------------- | --- |
 | Windows | `%APPDATA%\renym\history`                     |     |
 | macOS   | `~/Library/Application Support/renym/history` |     |
-| Linux   | `~/.local/share/renym/history`                |     |
+| Linux   | `~/.config/renym/history`                    |     |
 
 ---
 
@@ -22,7 +22,8 @@ History files are stored locally per operating system:
 
 - History is enabled by default.
 - History is stored per target directory (path).
-- Renym stores up to the last two rename operations per directory.
+- Ordinary completed rename records are pruned to the last two per directory; uncertain records are preserved.
+- Organization schema-2 journals and undo audits are retained indefinitely.
 - History is required for undo functionality.
 
 ---
@@ -36,6 +37,23 @@ renym --skip-history
 ```
 
 This prevents the current rename operation from being recorded.
+It cannot bypass mandatory history for organization apply.
+
+## Discovering runs
+
+```sh
+renym history
+renym undo --run <id> --dry-run
+```
+
+The listing includes input paths, journal states, recorded/undone file steps,
+directory ownership/cleanup counts and active recovery intent. Corrupt journals
+remain visible. Discovery does not require the input folder to remain populated
+or even exist; undo does require its validated live identity. Pending/undoing
+intent must be reconciled manually, never automatically replayed.
+
+Linux uses an absolute `XDG_CONFIG_HOME` when set. macOS uses
+`~/Library/Application Support`; Windows uses `%APPDATA%`.
 
 ---
 
