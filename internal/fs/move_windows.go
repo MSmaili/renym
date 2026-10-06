@@ -124,6 +124,18 @@ func moveHandleIdentity(file *os.File, _ os.FileInfo) (string, error) {
 
 func moveCheckLocal(_ *os.File) error { return nil }
 
+func moveCheckSource(file *os.File) error {
+	defer runtime.KeepAlive(file)
+	var info windows.ByHandleFileInformation
+	if err := windows.GetFileInformationByHandle(windows.Handle(file.Fd()), &info); err != nil {
+		return err
+	}
+	if info.NumberOfLinks != 1 {
+		return ErrHardLinkedSource
+	}
+	return nil
+}
+
 func moveEntryAbsent(parent *os.File, name string) error {
 	file, err := moveOpenFileAt(parent, name, false)
 	if err == nil {
@@ -162,6 +174,10 @@ func newMoveRenameInformation(parent windows.Handle, name string) (*moveRenameIn
 func moveRenameNoReplace(_ *os.File, _ string, source *os.File, to *os.File, name string) error {
 	defer runtime.KeepAlive(source)
 	defer runtime.KeepAlive(to)
+	// Windows may consume the source when an existing target is its hard link.
+	if err := moveCheckSource(source); err != nil {
+		return err
+	}
 	info, err := newMoveRenameInformation(windows.Handle(to.Fd()), name)
 	if err != nil {
 		return err

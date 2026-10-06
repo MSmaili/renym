@@ -13,6 +13,7 @@ import (
 var ErrUnsafeMovePath = errors.New("unsafe move path or directory")
 var ErrCrossFilesystem = errors.New("cross-filesystem move unsupported")
 var ErrMoveAttempted = errors.New("move has already been attempted")
+var ErrHardLinkedSource = errors.New("hard-linked move source unsupported on this platform")
 
 const (
 	maxMovePathBytes      = 4096
@@ -289,6 +290,9 @@ func (m *PreparedMove) check(ctx context.Context) error {
 	}
 	if identityVolume(actual.Identity) != m.from.volume() {
 		return ErrCrossFilesystem
+	}
+	if err := moveCheckSource(m.source); err != nil {
+		return err
 	}
 	return moveEntryAbsent(m.to.parent(), m.newName)
 }

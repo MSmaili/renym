@@ -86,6 +86,8 @@ func moveEntryAbsent(parent *os.File, name string) error {
 	return err
 }
 
+func moveCheckSource(*os.File) error { return nil }
+
 func moveUnixRenameError(err error) error {
 	if errors.Is(err, unix.EXDEV) {
 		return errors.Join(ErrCrossFilesystem, err)

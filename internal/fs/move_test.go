@@ -161,8 +161,11 @@ func TestPreparedMoveNativeHardLinkDestinationAppearanceRace(t *testing.T) {
 		}
 		return moveRenameNoReplace(m.from.parent(), m.oldName, m.source, m.to.parent(), m.newName)
 	})
-	expectNativeSuccess := runtime.GOOS == "windows"
-	if !errors.Is(err, os.ErrExist) || !result.Attempted || result.Completed != expectNativeSuccess || result.Verified || result.Target != nil {
+	expectedError := os.ErrExist
+	if runtime.GOOS == "windows" {
+		expectedError = ErrHardLinkedSource
+	}
+	if !errors.Is(err, expectedError) || !result.Attempted || result.Completed || result.Verified || result.Target != nil {
 		t.Fatalf("native hard-link conflict treated as verified move: %+v %v", result, err)
 	}
 	assertMoveBytes(t, moveOld(req), "source bytes")

@@ -88,3 +88,23 @@ func TestMoveNTOpenRejectsUnicodeLengthOverflowBeforeSyscall(t *testing.T) {
 		}
 	}
 }
+
+func TestPreparedMoveRejectsWindowsHardLinkedSource(t *testing.T) {
+	req := moveFixture(t)
+	alias := moveOld(req) + "-alias"
+	if err := os.Link(moveOld(req), alias); err != nil {
+		t.Fatal(err)
+	}
+	move, err := PrepareMove(context.Background(), req)
+	if move != nil {
+		_ = move.Close()
+	}
+	if !errors.Is(err, ErrHardLinkedSource) {
+		t.Fatalf("hard-linked source accepted: %v", err)
+	}
+	assertMoveBytes(t, moveOld(req), "source bytes")
+	assertMoveBytes(t, alias, "source bytes")
+	if _, err := os.Lstat(moveNew(req)); !os.IsNotExist(err) {
+		t.Fatal("hard-link refusal created destination")
+	}
+}
