@@ -55,7 +55,7 @@ rules:
       filename: '${file.stem | snake}_${index | pad(3)}${file.ext | lower}'
 `},
 	}
-	for _, name := range []string{"screenshots", "screenshot-dates"} {
+	for _, name := range []string{"screenshots", "screenshot-dates", "organization-preview"} {
 		toml, err := os.ReadFile(filepath.Join("..", "..", "examples", "templates", name+".toml"))
 		if err != nil {
 			t.Fatal(err)
@@ -85,6 +85,16 @@ rules:
 				db, mb := b.Match(ctx.Name, ctx.Directory)
 				if ma != mb || da.RuleID != db.RuleID || da.Mode != db.Mode || da.Dependencies() != db.Dependencies() {
 					t.Fatal("format changes matching/dependencies")
+				}
+				if da.Moves() != db.Moves() || da.MoveRoot() != db.MoveRoot() {
+					t.Fatal("format changes move action")
+				}
+				if ma && da.Moves() {
+					a, ea := da.RenderDirectory(ctx)
+					b, eb := db.RenderDirectory(ctx)
+					if a != b || fmt.Sprint(ea) != fmt.Sprint(eb) {
+						t.Fatal("format changes directory rendering")
+					}
 				}
 				if ma && da.RendersFilename() {
 					na, ea := da.Render(ctx)
@@ -122,8 +132,8 @@ func TestYAMLStrictSubset(t *testing.T) {
 		"both actions":             strings.Replace(valid, "{mode: snake}", "{mode: snake, filename: '${file.name}'}", 1),
 		"empty mode plus filename": strings.Replace(valid, "{mode: snake}", "{mode: '', filename: '${file.name}'}", 1),
 		"no action":                strings.Replace(valid, "{mode: snake}", "{}", 1),
-		"future source":            "source: {path: '~/Downloads'}\n" + valid,
-		"future move":              strings.Replace(valid, "    rename:", "    move: {root: '/tmp'}\n    rename:", 1),
+		"unsupported source":       "source: {path: '~/Downloads'}\n" + valid,
+		"unknown move field":       strings.Replace(valid, "    rename:", "    move: {root: '~/output', overwrite: true}\n    rename:", 1),
 		"empty glob":               valid + "    match: {glob: []}\n", "bad glob": valid + "    match: {glob: ['[']}\n",
 		"bad filename": strings.Replace(valid, "{mode: snake}", "{filename: '${env.HOME}'}", 1),
 		"oversized":    strings.Repeat("#", MaxBytes+1),

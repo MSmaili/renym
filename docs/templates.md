@@ -12,7 +12,7 @@ renym undo --dry-run
 renym undo
 ```
 
-Both formats support existing mode presets and [bounded filename patterns](filename-patterns.md), using the same schema, compiler, planner, and executor. Moving, watching, and AI actions are **not supported yet**. Unsupported fields are errors, not ignored behavior. `--template` and `--mode` are exclusive, even when one is explicitly empty. No preset is automatically discovered or executed from a project directory.
+Both formats support existing mode presets and [bounded filename patterns](filename-patterns.md), using the same schema, compiler, planner, and executor. [Organization previews](organization.md) add per-rule move destinations with an explicit input folder supplied at invocation, but **move apply/undo, watching, and AI actions are not supported yet**. Templates do not declare `source`; unsupported fields are errors, not ignored behavior. `--template` and `--mode` are exclusive, even when one is explicitly empty. No preset is automatically discovered or executed from a project directory.
 
 ## Names and storage
 
@@ -73,7 +73,7 @@ rules:
 
 YAML accepts exactly one document with typed mappings/sequences/scalars. Anchors, aliases, merge keys, custom tags, nulls, and type coercion are rejected. Booleans must be lowercase `true`/`false`; version must be a canonical nonnegative decimal integer. Quote strings that YAML would interpret as numbers, booleans, nulls, or timestamps. Single-quoted strings preserve backslashes and interpolation quotes, e.g. `filename: 'shot_${file.modified | date("timestamp")}_${index | pad(3)}${file.ext | lower}'`. Literal/folded block scalars retain YAML's normal newline behavior; invalid resulting names are not silently repaired (use `|-` if no trailing newline is intended).
 
-Each rule requires a unique 1–64 byte ID starting with an ASCII letter/digit and otherwise containing letters, digits, `_`, `-`, or `.`. Supply exactly one of `rename.mode` and `rename.filename`. `rename.mode` supports `upper`, `lower`, `pascal`, `camel`, `snake`, `kebab`, `title`, `screaming`, and `sentence`, preserving the existing mode behavior. `rename.filename` produces the complete basename; see [fields, helpers, escaping, and limits](filename-patterns.md).
+Each rule requires a unique 1–64 byte ID starting with an ASCII letter/digit and otherwise containing letters, digits, `_`, `-`, or `.`. A rule requires a rename or move action (or both). When rename exists, supply exactly one of `rename.mode` and `rename.filename`. `rename.mode` supports `upper`, `lower`, `pascal`, `camel`, `snake`, `kebab`, `title`, `screaming`, and `sentence`, preserving the existing mode behavior. `rename.filename` produces the complete basename; see [fields, helpers, escaping, and limits](filename-patterns.md). Move actions are [preview-only](organization.md); move-only rules preserve the original basename.
 
 ## Matching and naming
 

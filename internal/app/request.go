@@ -8,7 +8,7 @@ import (
 
 // Request describes a one-shot mode or template workflow, independent of Cobra.
 type Request struct {
-	Path               string
+	Path               string // explicit input; empty means cwd for rename, invalid for organization
 	Mode               string
 	TemplatePath       string // explicit path or configured name; plans freeze the resolved path
 	SelectionOverrides SelectionOverrides
@@ -37,22 +37,27 @@ type RuleMatch struct {
 	RuleID   string `json:"rule_id"`
 	Mode     string `json:"mode"`
 	Filename bool   `json:"filename,omitempty"`
+	Move     bool   `json:"move,omitempty"`
 	Index    int64  `json:"index"`
 }
 
 // Plan keeps executable snapshots private; presentation receives a separate
 // engine result. Later entry points must obtain plans from this service.
 type Plan struct {
-	Result       engine.PlanResult
-	TemplatePath string
-	TemplateName string
-	Selection    templates.Selection
-	Overrides    []string
-	Matches      []RuleMatch
-	operations   []fs.RenameOp
-	root         string
-	request      Request
-	templateSpec *templates.Spec
+	Result              engine.PlanResult
+	TemplatePath        string
+	TemplateName        string
+	Selection           templates.Selection
+	Overrides           []string
+	Matches             []RuleMatch
+	SourcePath          string
+	PreviewOnly         bool
+	DirectoriesToCreate []string
+	previewOnly         bool
+	operations          []fs.RenameOp
+	root                string
+	request             Request
+	templateSpec        *templates.Spec
 }
 
 type Result struct {

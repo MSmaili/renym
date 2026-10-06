@@ -20,14 +20,17 @@ func presetFlagCommand(t *testing.T) *cobra.Command {
 	t.Helper()
 	oldMode, oldTemplate, oldRecursive, oldDirectories, oldDirsOnly := mode, templatePath, recursive, directories, dirsOnly
 	oldIgnore, oldDefault, oldVersion := ignore, noDefaultIgnore, showVersion
+	oldPath := path
 	t.Cleanup(func() {
 		mode, templatePath, recursive, directories, dirsOnly = oldMode, oldTemplate, oldRecursive, oldDirectories, oldDirsOnly
 		ignore, noDefaultIgnore, showVersion = oldIgnore, oldDefault, oldVersion
+		path = oldPath
 	})
 	showVersion = false
 	cmd := &cobra.Command{Use: "test"}
 	cmd.Flags().StringVar(&mode, "mode", "", "")
 	cmd.Flags().StringVar(&templatePath, "template", "", "")
+	cmd.Flags().StringVar(&path, "path", ".", "")
 	cmd.Flags().BoolVar(&recursive, "recursive", false, "")
 	cmd.Flags().BoolVar(&directories, "directories", false, "")
 	cmd.Flags().BoolVar(&dirsOnly, "dirs-only", false, "")

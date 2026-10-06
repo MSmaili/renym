@@ -24,7 +24,11 @@ var validateTemplateCmd = &cobra.Command{
 			return err
 		}
 		spec := compiled.Snapshot()
-		log.Info("Valid template: %s (%d rule(s), kind=%s, recursive=%t)\n", compiled.SourcePath(), len(spec.Rules), spec.Selection.Kind, spec.Selection.Recursive)
+		status := ""
+		if compiled.HasMoves() {
+			status = " (organization preview only; use --dry-run)"
+		}
+		log.Info("Valid template: %s (%d rule(s), kind=%s, recursive=%t)%s\n", compiled.SourcePath(), len(spec.Rules), spec.Selection.Kind, spec.Selection.Recursive, status)
 		return nil
 	},
 }

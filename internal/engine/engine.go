@@ -58,6 +58,26 @@ func (e *Engine) Plan(paths []string) PlanResult {
 // basenames. A reason skips an item; the generator cannot choose a directory or
 // bypass final-name validation. Input order is the conflict winner order.
 func (e *Engine) PlanNames(paths []string, generate func(string) (name, reason string)) PlanResult {
+	return e.planTargets(paths, func(path string) (string, string) {
+		name, reason := generate(path)
+		if reason != "" {
+			return "", reason
+		}
+		if err := fs.ValidateName(name); err != nil {
+			return "", "invalid final name"
+		}
+		return filepath.Join(filepath.Dir(path), name), ""
+	}, false)
+}
+
+// PlanFileTargets shares conflict policy with basename renames but admits full
+// file targets chosen by the application. Containment/volume/root validation is
+// the application's responsibility; this does not make targets executable.
+func (e *Engine) PlanFileTargets(paths []string, generate func(string) (target, reason string)) PlanResult {
+	return e.planTargets(paths, generate, true)
+}
+
+func (e *Engine) planTargets(paths []string, generate func(string) (target, reason string), fileTargets bool) PlanResult {
 	planResult := PlanResult{
 		Operations: []RenameOp{},
 		Skipped:    []SkippedFile{},
@@ -79,16 +99,15 @@ func (e *Engine) PlanNames(paths []string, generate func(string) (name, reason s
 			e.addSkipped(&planResult, path, "unsupported source name for reversible rename")
 			continue
 		}
-		newName, reason := generate(path)
+		newPath, reason := generate(path)
 		if reason != "" {
 			e.addSkipped(&planResult, path, reason)
 			continue
 		}
-		if err := fs.ValidateName(newName); err != nil {
+		if err := fs.ValidateName(filepath.Base(newPath)); err != nil || newPath == "" || filepath.Clean(newPath) != newPath || fileTargets && !filepath.IsAbs(newPath) {
 			e.addSkipped(&planResult, path, "invalid final name")
 			continue
 		}
-		newPath := filepath.Join(filepath.Dir(path), newName)
 		newPathCompare := compareKey(newPath, caseSensitive)
 
 		if newPath == path {
@@ -105,6 +124,7 @@ func (e *Engine) PlanNames(paths []string, generate func(string) (name, reason s
 	}
 
 	seen := make(map[string]string, len(pending))
+	directories := make(map[string]string)
 
 	for _, op := range pending {
 		if e.hasDiskCollision(op.newPath) {
@@ -125,6 +145,29 @@ func (e *Engine) PlanNames(paths []string, generate func(string) (name, reason s
 			e.addSkipped(&planResult, op.oldPath, "duplicate target in batch")
 			e.addCollision(&planResult, existingSource, op.oldPath, op.newPath)
 			continue
+		}
+		if fileTargets {
+			conflict := directories[op.newPathCompare]
+			for parent := filepath.Dir(op.newPath); conflict == ""; parent = filepath.Dir(parent) {
+				conflict = seen[compareKey(parent, caseSensitive)]
+				if filepath.Dir(parent) == parent {
+					break
+				}
+			}
+			if conflict != "" {
+				e.addSkipped(&planResult, op.oldPath, "file/directory target conflict in batch")
+				e.addCollision(&planResult, conflict, op.oldPath, op.newPath)
+				continue
+			}
+			for parent := filepath.Dir(op.newPath); ; parent = filepath.Dir(parent) {
+				key := compareKey(parent, caseSensitive)
+				if directories[key] == "" {
+					directories[key] = op.oldPath
+				}
+				if filepath.Dir(parent) == parent {
+					break
+				}
+			}
 		}
 
 		planResult.Operations = append(planResult.Operations, RenameOp{

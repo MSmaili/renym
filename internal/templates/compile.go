@@ -16,9 +16,11 @@ var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 // Compiled contains no mutable state or callable user code. All patterns and
 // modes are validated once; matching uses the standard library's path.Match.
 type Compiled struct {
-	spec       Spec
-	programs   []*render.Program
-	sourcePath string
+	spec        Spec
+	programs    []*render.Program
+	directories []*directoryProgram
+	hasMoves    bool
+	sourcePath  string
 }
 
 // SourcePath is the resolved origin of a loaded template; Parse-only results
@@ -26,17 +28,36 @@ type Compiled struct {
 func (c *Compiled) SourcePath() string { return c.sourcePath }
 
 type Decision struct {
-	RuleID  string
-	Mode    string
-	program *render.Program
+	RuleID    string
+	Mode      string
+	program   *render.Program
+	moveRoot  string
+	directory *directoryProgram
 }
+
+func (c *Compiled) HasMoves() bool  { return c.hasMoves }
+func (d Decision) Moves() bool      { return d.moveRoot != "" }
+func (d Decision) MoveRoot() string { return d.moveRoot }
 
 func (d Decision) RendersFilename() bool { return d.program != nil }
 func (d Decision) Dependencies() render.Dependencies {
-	if d.program == nil {
-		return render.Dependencies{}
+	var result render.Dependencies
+	include := func(program *render.Program) {
+		if program == nil {
+			return
+		}
+		dep := program.Dependencies()
+		result.Modified = result.Modified || dep.Modified
+		result.Size = result.Size || dep.Size
+		result.Index = result.Index || dep.Index
 	}
-	return d.program.Dependencies()
+	include(d.program)
+	if d.directory != nil {
+		for _, program := range d.directory.parts {
+			include(program)
+		}
+	}
+	return result
 }
 func (d Decision) Render(ctx render.Context) (string, error) {
 	if d.program == nil {
@@ -74,6 +95,8 @@ func compile(doc document) (*Compiled, error) {
 	}
 	seen := make(map[string]bool, len(spec.Rules))
 	programs := make([]*render.Program, len(spec.Rules))
+	directories := make([]*directoryProgram, len(spec.Rules))
+	hasMoves := false
 	for i, rule := range spec.Rules {
 		field := fmt.Sprintf("rules[%d] (%q)", i+1, rule.ID)
 		if !identifier.MatchString(rule.ID) {
@@ -97,17 +120,33 @@ func compile(doc document) (*Compiled, error) {
 				return nil, fmt.Errorf("%s.match.extensions: %q must be a lowercase dot-prefixed last extension, such as .png", field, ext)
 			}
 		}
+		if rule.Move != nil {
+			hasMoves = true
+			if err := ValidateRoot(rule.Move.Root); err != nil {
+				return nil, fmt.Errorf("%s.move.root: %w", field, err)
+			}
+			if rule.Move.Directory != nil {
+				var err error
+				directories[i], err = compileDirectory(*rule.Move.Directory)
+				if err != nil {
+					return nil, fmt.Errorf("%s.move.directory: %w", field, err)
+				}
+			}
+		}
 		if rule.Rename.Filename != nil {
 			program, err := render.Compile(*rule.Rename.Filename)
 			if err != nil {
 				return nil, fmt.Errorf("%s.rename.filename: %w", field, err)
 			}
 			programs[i] = program
-		} else if !slices.Contains([]string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "screaming", "sentence"}, rule.Rename.Mode) {
+		} else if (rule.Rename.Mode != "" || rule.Move == nil) && !slices.Contains([]string{"upper", "lower", "pascal", "camel", "snake", "kebab", "title", "screaming", "sentence"}, rule.Rename.Mode) {
 			return nil, fmt.Errorf("%s.rename.mode: unknown mode %q", field, rule.Rename.Mode)
 		}
 	}
-	return &Compiled{spec: spec, programs: programs}, nil
+	if hasMoves && spec.Selection.Kind != "files" {
+		return nil, fmt.Errorf("move templates require selection.kind=files")
+	}
+	return &Compiled{spec: spec, programs: programs, directories: directories, hasMoves: hasMoves}, nil
 }
 
 func validateGlobs(field string, globs []string) error {
@@ -136,6 +175,14 @@ func (c *Compiled) Snapshot() Spec {
 	spec.Selection = c.Selection()
 	spec.Rules = slices.Clone(c.spec.Rules)
 	for i := range spec.Rules {
+		if move := spec.Rules[i].Move; move != nil {
+			copy := *move
+			if move.Directory != nil {
+				directory := *move.Directory
+				copy.Directory = &directory
+			}
+			spec.Rules[i].Move = &copy
+		}
 		if filename := spec.Rules[i].Rename.Filename; filename != nil {
 			copy := *filename
 			spec.Rules[i].Rename.Filename = &copy
@@ -174,7 +221,11 @@ func (c *Compiled) Match(basename string, directory bool) (Decision, bool) {
 				continue
 			}
 		}
-		return Decision{RuleID: rule.ID, Mode: rule.Rename.Mode, program: c.programs[i]}, true
+		decision := Decision{RuleID: rule.ID, Mode: rule.Rename.Mode, program: c.programs[i], directory: c.directories[i]}
+		if rule.Move != nil {
+			decision.moveRoot = rule.Move.Root
+		}
+		return decision, true
 	}
 	return Decision{}, false
 }

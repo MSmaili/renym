@@ -59,6 +59,20 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() && !info.IsDir() {
 		return Plan{}, fmt.Errorf("unsupported input kind: %s", path)
 	}
+	if compiled != nil && compiled.HasMoves() && !info.IsDir() {
+		return Plan{}, errors.New("organization input must be an existing directory")
+	}
+	var organization *organizationPreview
+	if compiled != nil && compiled.HasMoves() {
+		path, err = filepath.EvalSymlinks(path)
+		if err != nil {
+			return Plan{}, err
+		}
+		organization, err = prepareOrganization(path, compiled)
+		if err != nil {
+			return Plan{}, err
+		}
+	}
 	req.Path, req.Ignore = path, append([]string(nil), req.Ignore...)
 	root := path
 	if !info.IsDir() {
@@ -100,16 +114,21 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	// Rule evaluation order is lexical and independent of physical execution
 	// depth. Matching always uses original names/kinds, never proposed targets.
 	sort.SliceStable(paths, func(i, j int) bool { return filepath.ToSlash(paths[i]) < filepath.ToSlash(paths[j]) })
-	plan := Plan{root: root, request: req, Overrides: overrides}
-	names, reasons := make(map[string]string, len(paths)), make(map[string]string)
+	plan := Plan{root: root, request: req, Overrides: overrides, SourcePath: path, PreviewOnly: organization != nil, previewOnly: organization != nil}
+	targets, reasons := make(map[string]string, len(paths)), make(map[string]string)
+	missing := make(map[string][]string)
 	ordinals := make(map[string]int64)
 	for _, path := range paths {
 		if err := ctx.Err(); err != nil {
 			return Plan{}, err
 		}
 		mode := engine.ModeRegistry[req.Mode]
+		name := filepath.Base(path)
+		var decision templates.Decision
+		var renderContext render.Context
 		if compiled != nil {
-			decision, matched := compiled.Match(filepath.Base(path), snapshots[path].Mode.IsDir())
+			var matched bool
+			decision, matched = compiled.Match(name, snapshots[path].Mode.IsDir())
 			if !matched {
 				reasons[path] = "no template rule matched"
 				continue
@@ -117,35 +136,94 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 			mode = engine.ModeRegistry[decision.Mode]
 			ordinals[decision.RuleID]++
 			ordinal := ordinals[decision.RuleID]
-			plan.Matches = append(plan.Matches, RuleMatch{Path: path, RuleID: decision.RuleID, Mode: decision.Mode, Filename: decision.RendersFilename(), Index: ordinal})
-			if decision.RendersFilename() {
-				snapshot := snapshots[path]
-				renderContext := render.Context{Name: filepath.Base(path), Directory: snapshot.Mode.IsDir()}
-				dependencies := decision.Dependencies()
-				if dependencies.Modified {
-					renderContext.Modified = &snapshot.Modified
-				}
-				if dependencies.Size && !renderContext.Directory {
-					renderContext.Size = &snapshot.Size
-				}
-				if dependencies.Index {
-					renderContext.Index = ordinal
-				}
-				name, err := decision.Render(renderContext)
-				if err != nil {
-					reasons[path] = err.Error()
-				} else {
-					names[path] = name
-				}
-				continue
+			plan.Matches = append(plan.Matches, RuleMatch{Path: path, RuleID: decision.RuleID, Mode: decision.Mode, Filename: decision.RendersFilename(), Move: decision.Moves(), Index: ordinal})
+			snapshot := snapshots[path]
+			renderContext = render.Context{Name: name, Directory: snapshot.Mode.IsDir()}
+			dependencies := decision.Dependencies()
+			if dependencies.Modified {
+				renderContext.Modified = &snapshot.Modified
+			}
+			if dependencies.Size && !renderContext.Directory {
+				renderContext.Size = &snapshot.Size
+			}
+			if dependencies.Index {
+				renderContext.Index = ordinal
 			}
 		}
-		names[path] = engine.ModeBasename(filepath.Base(path), snapshots[path].Mode.IsDir(), mode, s.adapter)
+		if decision.RendersFilename() {
+			name, err = decision.Render(renderContext)
+			if err != nil {
+				reasons[path] = err.Error()
+				continue
+			}
+		} else if mode != nil {
+			name = engine.ModeBasename(name, snapshots[path].Mode.IsDir(), mode, s.adapter)
+		}
+		if err := fs.ValidateName(name); err != nil {
+			reasons[path] = "invalid final name"
+			continue
+		}
+		target := filepath.Join(filepath.Dir(path), name)
+		if decision.Moves() {
+			directory, err := decision.RenderDirectory(renderContext)
+			if err != nil {
+				reasons[path] = err.Error()
+				continue
+			}
+			destination := organization.destinations[decision.MoveRoot()]
+			if volumeIdentity(snapshots[path].Identity) != destination.volume {
+				reasons[path] = "cross-filesystem move unsupported"
+				continue
+			}
+			parent := destination.root
+			if directory != "" {
+				local, err := filepath.Localize(directory)
+				if err != nil {
+					reasons[path] = "invalid relative destination directory"
+					continue
+				}
+				parent = filepath.Join(parent, local)
+			}
+			dirs, err := destination.missingDirectories(parent)
+			if err != nil {
+				reasons[path] = err.Error()
+				continue
+			}
+			target = filepath.Join(parent, name)
+			missing[path] = dirs
+		}
+		if organization != nil && s.protectsHistory(target) {
+			reasons[path] = "protected history destination"
+			continue
+		}
+		targets[path] = target
 	}
 	if req.Directories {
 		paths = e.SortPathsByDepth(paths)
 	}
-	result := e.PlanNames(paths, func(path string) (string, string) { return names[path], reasons[path] })
+	var result engine.PlanResult
+	if organization != nil {
+		result = e.PlanFileTargets(paths, func(path string) (string, string) { return targets[path], reasons[path] })
+		created := make(map[string]bool)
+		for _, op := range result.Operations {
+			for _, directory := range missing[op.OldPath] {
+				key := strings.ToLower(directory)
+				if !created[key] {
+					created[key] = true
+					plan.DirectoriesToCreate = append(plan.DirectoriesToCreate, directory)
+				}
+			}
+		}
+		sort.Slice(plan.DirectoriesToCreate, func(i, j int) bool {
+			a, b := plan.DirectoriesToCreate[i], plan.DirectoriesToCreate[j]
+			if len(a) != len(b) {
+				return len(a) < len(b)
+			}
+			return a < b
+		})
+	} else {
+		result = e.PlanNames(paths, func(path string) (string, string) { return filepath.Base(targets[path]), reasons[path] })
+	}
 	if err := ctx.Err(); err != nil {
 		return Plan{}, err
 	}
@@ -170,7 +248,9 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 			return Plan{}, err
 		}
 		snapshot := snapshots[op.OldPath]
-		plan.operations = append(plan.operations, fs.RenameOp{ID: len(plan.operations) + 1, OldPath: op.OldPath, NewPath: op.NewPath, Source: snapshot})
+		if !plan.previewOnly {
+			plan.operations = append(plan.operations, fs.RenameOp{ID: len(plan.operations) + 1, OldPath: op.OldPath, NewPath: op.NewPath, Source: snapshot})
+		}
 	}
 	return plan, nil
 }
@@ -187,6 +267,9 @@ func (s *Service) Execute(ctx context.Context, plan Plan) (Result, error) {
 	result := Result{Plan: plan.Result}
 	if err := ctx.Err(); err != nil {
 		return result, err
+	}
+	if plan.previewOnly && !plan.request.DryRun {
+		return result, ErrOrganizationPreviewOnly
 	}
 	if plan.request.DryRun || len(plan.operations) == 0 {
 		return result, nil
@@ -390,10 +473,10 @@ func (s *Service) protectsHistory(path string) bool {
 	if intersects(path, state) || intersects(state, path) {
 		return true
 	}
-	// Also cover ordinary existing path aliases. This is not a substitute for
+	// Also cover ordinary aliases of existing and future paths. This is not a substitute for
 	// rooted traversal against a hostile process changing symlinks concurrently.
 	actualState, stateErr := resolveFuturePath(state)
-	actualPath, pathErr := filepath.EvalSymlinks(path)
+	actualPath, pathErr := resolveFuturePath(path)
 	return stateErr == nil && pathErr == nil && (intersects(actualPath, actualState) || intersects(actualState, actualPath))
 }
 

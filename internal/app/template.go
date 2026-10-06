@@ -28,6 +28,15 @@ func prepareRequest(req Request) (Request, *templates.Compiled, []string, error)
 		return req, nil, nil, err
 	}
 	req.TemplatePath = compiled.SourcePath()
+	if req.Path == "" {
+		if compiled.HasMoves() {
+			return req, nil, nil, fmt.Errorf("organization requires an explicit input folder; provide --path")
+		}
+		req.Path = "."
+	}
+	if compiled.HasMoves() && !req.DryRun {
+		return req, nil, nil, ErrOrganizationPreviewOnly
+	}
 	selection := compiled.Selection()
 	var overrides []string
 	if req.SelectionOverrides.Kind != nil {
@@ -48,6 +57,9 @@ func prepareRequest(req Request) (Request, *templates.Compiled, []string, error)
 	}
 	if !slices.Contains([]string{"files", "directories", "both"}, selection.Kind) {
 		return req, nil, nil, fmt.Errorf("selection override kind: expected files, directories, or both")
+	}
+	if compiled.HasMoves() && selection.Kind != "files" {
+		return req, nil, nil, fmt.Errorf("move templates support only regular-file selection")
 	}
 	req.Files, req.Directories = selection.Kind != "directories", selection.Kind != "files"
 	req.Recursive, req.Ignore, req.NoDefaultIgnore = selection.Recursive, selection.Ignore, selection.NoDefaultIgnore

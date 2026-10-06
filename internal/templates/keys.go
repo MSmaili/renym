@@ -29,7 +29,7 @@ func validateKeys(root map[string]any) error {
 	for i, value := range rules {
 		rule, _ := value.(map[string]any)
 		field := fmt.Sprintf("rules[%d]", i+1)
-		if err := exactKeys(rule, field, "id", "match", "rename"); err != nil {
+		if err := exactKeys(rule, field, "id", "match", "rename", "move"); err != nil {
 			return err
 		}
 		match, _ := rule["match"].(map[string]any)
@@ -37,12 +37,21 @@ func validateKeys(root map[string]any) error {
 			return err
 		}
 		rename, _ := rule["rename"].(map[string]any)
+		move, _ := rule["move"].(map[string]any)
+		if err := exactKeys(move, field+".move", "root", "directory"); err != nil {
+			return err
+		}
 		if err := exactKeys(rename, field+".rename", "mode", "filename"); err != nil {
 			return err
 		}
 		_, mode := rename["mode"]
 		_, filename := rename["filename"]
-		if mode == filename {
+		_, hasRename := rule["rename"]
+		_, hasMove := rule["move"]
+		if !hasRename && !hasMove {
+			return fmt.Errorf("%s: supply at least one of rename or move", field)
+		}
+		if hasRename && mode == filename {
 			return fmt.Errorf("%s.rename: supply exactly one of mode or filename", field)
 		}
 	}

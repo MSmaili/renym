@@ -29,6 +29,12 @@ type Rule struct {
 	ID     string `toml:"id" yaml:"id" json:"id"`
 	Match  Match  `toml:"match" yaml:"match" json:"match"`
 	Rename Rename `toml:"rename" yaml:"rename" json:"rename"`
+	Move   *Move  `toml:"move" yaml:"move" json:"move,omitempty"`
+}
+
+type Move struct {
+	Root      string  `toml:"root" yaml:"root" json:"root"`
+	Directory *string `toml:"directory" yaml:"directory" json:"directory,omitempty"`
 }
 
 type Match struct {

@@ -1,0 +1,14 @@
+# Experimental preview only. Move application and undo are not available yet.
+version = 1
+name = "Organize screenshots (preview only)"
+
+[[rules]]
+id = "screenshots"
+[rules.match]
+glob = ["Screenshot*", "Screen Shot*"]
+extensions = [".png"]
+[rules.move]
+root = "~/Pictures/Renym"
+directory = 'screenshots/${file.modified | date("month")}'
+[rules.rename]
+filename = '${file.stem | snake}${file.ext | lower}'

@@ -94,6 +94,34 @@ func validateFlags(cmd *cobra.Command, args []string) error {
 }
 
 func runRename(cmd *cobra.Command, args []string) error {
+	cfg := renameRequest(cmd)
+	service, err := newRenameService(cfg)
+	if err != nil {
+		return err
+	}
+	plan, err := service.Plan(cmd.Context(), cfg)
+	if err != nil {
+		return err
+	}
+	printTemplatePlan(plan)
+	if len(plan.Result.Operations) == 0 {
+		printEmptyRenamePlan(plan)
+		return nil
+	}
+
+	log.Debug("Processing %d file(s)...\n", len(plan.Result.Operations))
+	result, err := service.Execute(cmd.Context(), plan)
+	if err != nil {
+		return fmt.Errorf("rename failed after %d completed operation(s): %w", len(result.Execution.Completed), err)
+	}
+	if cfg.DryRun {
+		printRenamePreview(plan)
+	}
+	printResults(plan.Result, cfg.DryRun)
+	return nil
+}
+
+func renameRequest(cmd *cobra.Command) app.Request {
 	cfg := app.Request{
 		Path:            path,
 		Mode:            mode,
@@ -110,8 +138,15 @@ func runRename(cmd *cobra.Command, args []string) error {
 	}
 	if templatePath != "" {
 		cfg.SelectionOverrides = templateSelectionOverrides(cmd)
+		// Organization requires an explicit input; distinguish absence from --path=.
+		if !cmd.Flags().Changed("path") {
+			cfg.Path = ""
+		}
 	}
+	return cfg
+}
 
+func newRenameService(cfg app.Request) (*app.Service, error) {
 	adapter := fs.NewAdapter()
 
 	service := app.NewService(adapter, nil)
@@ -120,55 +155,70 @@ func runRename(cmd *cobra.Command, args []string) error {
 	if !cfg.SkipHistory {
 		store, err := history.NewGlobalStore(adapter)
 		if err != nil && !cfg.DryRun {
-			return fmt.Errorf("history is required: %w", err)
+			return nil, fmt.Errorf("history is required: %w", err)
 		}
 		if err == nil {
 			service = app.NewService(adapter, store)
 		}
 	}
-	plan, err := service.Plan(cmd.Context(), cfg)
-	if err != nil {
-		return err
-	}
-	if plan.TemplatePath != "" {
-		log.Info("Template: %s", plan.TemplatePath)
-		if plan.TemplateName != "" {
-			log.Info(" (%s)", plan.TemplateName)
-		}
-		log.Info("\nSelection: kind=%s recursive=%t ignore=%v no_default_ignore=%t\n", plan.Selection.Kind, plan.Selection.Recursive, plan.Selection.Ignore, plan.Selection.NoDefaultIgnore)
-		if len(plan.Overrides) > 0 {
-			log.Info("CLI overrides: %s\n", strings.Join(plan.Overrides, ", "))
-		}
-		for _, match := range plan.Matches {
-			action := match.Mode
-			if match.Filename {
-				action = "filename"
-			}
-			log.Debug("Rule %s (%s, index=%d): %s\n", match.RuleID, action, match.Index, match.Path)
-		}
-	}
+	return service, nil
+}
 
-	if len(plan.Result.Operations) == 0 {
+func printTemplatePlan(plan app.Plan) {
+	if plan.TemplatePath == "" {
+		return
+	}
+	log.Info("Template: %s", plan.TemplatePath)
+	if plan.TemplateName != "" {
+		log.Info(" (%s)", plan.TemplateName)
+	}
+	log.Info("\nSelection: kind=%s recursive=%t ignore=%v no_default_ignore=%t\n", plan.Selection.Kind, plan.Selection.Recursive, plan.Selection.Ignore, plan.Selection.NoDefaultIgnore)
+	log.Info("Source: %s\n", plan.SourcePath)
+	if plan.PreviewOnly {
+		log.Info("Organization preview only; move apply/undo are not available yet.\n")
+	}
+	if len(plan.Overrides) > 0 {
+		log.Info("CLI overrides: %s\n", strings.Join(plan.Overrides, ", "))
+	}
+	for _, match := range plan.Matches {
+		log.Debug("Rule %s (%s, index=%d): %s\n", match.RuleID, ruleActionLabel(match), match.Index, match.Path)
+	}
+}
+
+func ruleActionLabel(match app.RuleMatch) string {
+	action := match.Mode
+	if match.Filename {
+		action = "filename"
+	}
+	if !match.Move {
+		return action
+	}
+	if action == "" {
+		return "move"
+	}
+	return action + "+move"
+}
+
+func printEmptyRenamePlan(plan app.Plan) {
+	if plan.PreviewOnly {
+		log.Info("\nNo organization changes planned\n")
+	} else {
 		log.Info("\n✓ No files to rename\n")
-		printSkipped(plan.Result.Skipped)
-		return nil
 	}
+	printSkipped(plan.Result.Skipped)
+}
 
-	log.Debug("Processing %d file(s)...\n", len(plan.Result.Operations))
-
-	result, err := service.Execute(cmd.Context(), plan)
-	if err != nil {
-		return fmt.Errorf("rename failed after %d completed operation(s): %w", len(result.Execution.Completed), err)
+func printRenamePreview(plan app.Plan) {
+	for _, directory := range plan.DirectoriesToCreate {
+		log.Info("Would create directory: %s\n", directory)
 	}
-
-	if cfg.DryRun {
-		for _, op := range plan.Result.Operations {
-			log.Info("Would rename: %s -> %s\n", op.OldPath, op.NewPath)
+	for _, op := range plan.Result.Operations {
+		action := "rename"
+		if filepath.Dir(op.OldPath) != filepath.Dir(op.NewPath) {
+			action = "move"
 		}
+		log.Info("Would %s: %s -> %s\n", action, op.OldPath, op.NewPath)
 	}
-	printResults(plan.Result, cfg.DryRun)
-
-	return nil
 }
 
 func templateSelectionOverrides(cmd *cobra.Command) app.SelectionOverrides {
@@ -226,7 +276,7 @@ func printResults(result engine.PlanResult, dryRun bool) {
 		log.Info("%s\n", thinSeparator)
 		for i, collision := range result.Collisions {
 			log.Info("  %d. Multiple files trying to rename to:\n", i+1)
-			log.Info("     → %s\n", filepath.Base(collision.Target))
+			log.Info("     → %s\n", collision.Target)
 			log.Info("     Sources: %s, %s\n", filepath.Base(collision.Source1), filepath.Base(collision.Source2))
 			if i < len(result.Collisions)-1 {
 				log.Info("\n")

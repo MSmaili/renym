@@ -82,7 +82,7 @@ renym template list
 renym --template screenshots -p ./inbox --dry-run
 ```
 
-Use ordered rules with existing rename modes or [bounded filename patterns](docs/filename-patterns.md). [Schema, storage, matching, and CLI overrides](docs/templates.md). `--template` and `--mode` are exclusive. Named templates live in `~/.config/renym/templates` on macOS/Linux (absolute `XDG_CONFIG_HOME` overrides), or `%APPDATA%\renym\templates` on Windows. Moving, watching, and AI actions are not implemented yet.
+Use ordered rules with existing rename modes or [bounded filename patterns](docs/filename-patterns.md). [Schema, storage, matching, and CLI overrides](docs/templates.md). `--template` and `--mode` are exclusive. Named templates live in `~/.config/renym/templates` on macOS/Linux (absolute `XDG_CONFIG_HOME` overrides), or `%APPDATA%\renym\templates` on Windows. [Organization previews](docs/organization.md) are experimental: templates own rules/destinations, while `--path` selects the input folder. Move apply/undo, watching, and AI actions are not implemented yet.
 
 ## Rename and undo safety
 

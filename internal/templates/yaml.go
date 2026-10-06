@@ -163,6 +163,12 @@ func yamlFieldShape(parent, field string) string {
 			return "match"
 		case "rename":
 			return "rename"
+		case "move":
+			return "move"
+		}
+	case "move":
+		if field == "root" || field == "directory" {
+			return "string"
 		}
 	case "match":
 		switch field {
