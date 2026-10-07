@@ -129,36 +129,29 @@ func TestOrganizationRunAPIErrorsAndCancellation(t *testing.T) {
 	}
 }
 
-func TestNormalBuildKeepsOrganizationApplyGate(t *testing.T) {
-	if organizationApplyEnabled {
-		t.Skip("acceptance build")
-	}
+func TestOrganizationApplyRequiresHistoryWithoutMutation(t *testing.T) {
 	input, output, policy := organizationFixture(t)
 	put(t, filepath.Join(input, "one.txt"), "bytes")
 	put(t, policy, movePreset(output, ""))
-	service := NewService(nil, forbiddenStore{})
-	if _, err := service.Rename(context.Background(), Request{Path: input, TemplatePath: policy}); !errors.Is(err, ErrOrganizationPreviewOnly) {
-		t.Fatalf("public apply gate: %v", err)
+	service := NewService(nil, nil)
+	if _, err := service.Rename(context.Background(), Request{Path: input, TemplatePath: policy}); !errors.Is(err, ErrOrganizationHistoryRequired) {
+		t.Fatalf("missing history accepted: %v", err)
 	}
 	requireFileBytes(t, filepath.Join(input, "one.txt"), "bytes")
 	if _, err := os.Lstat(output); !os.IsNotExist(err) {
-		t.Fatal("gated apply created output")
+		t.Fatal("apply without history created output")
 	}
 }
 
-func TestNormalServiceUndoGateStillReportsRecovery(t *testing.T) {
+func TestOrganizationUndoReportsRecoveryBeforeMutation(t *testing.T) {
 	service, store, plan, input, output := organizationApplyFixture(t, "one.txt")
 	applied, err := service.Execute(context.Background(), plan)
 	if err != nil {
 		t.Fatal(err)
 	}
-	service.organizationEnabled = false
 	preview, err := service.Undo(context.Background(), input, true)
 	if err != nil || len(preview.Plan.Operations) != 1 {
 		t.Fatalf("preview: %+v %v", preview, err)
-	}
-	if _, err := service.Undo(context.Background(), input, false); !errors.Is(err, ErrOrganizationPreviewOnly) {
-		t.Fatalf("undo gate: %v", err)
 	}
 	entry, err := store.Latest(input)
 	if err != nil {
@@ -170,7 +163,7 @@ func TestNormalServiceUndoGateStillReportsRecovery(t *testing.T) {
 	}
 	result, err := service.Undo(context.Background(), input, false)
 	if err == nil || !result.RequiresReconciliation {
-		t.Fatalf("uncertainty hidden by gate: %+v %v", result, err)
+		t.Fatalf("uncertainty hidden: %+v %v", result, err)
 	}
 	requireFileBytes(t, filepath.Join(output, "year/month/one.txt"), "bytes-one.txt")
 }

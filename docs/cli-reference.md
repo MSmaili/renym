@@ -50,7 +50,10 @@ For detailed behavior rules and directory interactions, see [Modes](modes.md).
 |---|---|
 |`completion`|Generate shell autocompletion scripts|
 |`help`|Show help for a command|
-|`undo`|Undo rename operations using local history|
+|`history`|List saved runs, input paths and recovery states|
+|`template validate <name-or-file>`|Validate a TOML/YAML template without changes|
+|`template list`|List configured template names and paths|
+|`undo`|Undo the latest eligible rename or organization run using local history|
 |`version`|Show installed Renym version|
 
 ---
@@ -68,7 +71,8 @@ For detailed behavior rules and directory interactions, see [Modes](modes.md).
 |`--no-default-ignore`|bool|`false`|Disable default ignore patterns (`.git`, `.svn`, `.hg`)|
 |`-p`, `--path <path>`|string|`.`|Target file or directory|
 |`-r`, `--recursive`|bool|`false`|Process subdirectories recursively|
-|`--skip-history`|bool|`false`|Skip recording operation history (disables undo)|
+|`--template <name-or-file>`|string|—|Use a TOML/YAML template instead of `--mode`|
+|`--skip-history`|bool|`false`|Skip ordinary rename history (disables undo); rejected for organization apply|
 |`-v`, `--version`|bool|—|Show installed version|
 
 ---
@@ -78,8 +82,9 @@ For detailed behavior rules and directory interactions, see [Modes](modes.md).
 `renym history` lists saved run IDs and recovery states. `renym undo` defaults
 to the current directory; select a different input with `--path <folder>` or
 its latest eligible run with `--run <id>` (mutually exclusive). Both support
-`--dry-run`. Positional undo paths are not accepted. Organization mutation
-remains gated pending native CLI acceptance.
+`--dry-run`. Positional undo paths are not accepted. Organization apply requires
+an explicit existing directory `--path`, regular-file selection and history.
+Preview first; omit `--dry-run` to apply the template's local same-filesystem moves.
 
 - If conflicting flags are provided, Renym applies deterministic precedence.
 - Flags not listed here are not part of the public CLI interface.

@@ -20,16 +20,15 @@ import (
 )
 
 type Service struct {
-	adapter             fs.FileSystemAdapter
-	store               history.Store
-	organizationEnabled bool
+	adapter fs.FileSystemAdapter
+	store   history.Store
 }
 
 func NewService(adapter fs.FileSystemAdapter, store history.Store) *Service {
 	if adapter == nil {
 		adapter = fs.NewAdapter()
 	}
-	return &Service{adapter: adapter, store: store, organizationEnabled: organizationApplyEnabled}
+	return &Service{adapter: adapter, store: store}
 }
 
 func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
@@ -39,9 +38,6 @@ func (s *Service) Plan(ctx context.Context, req Request) (Plan, error) {
 	req, compiled, overrides, err := prepareRequest(req)
 	if err != nil {
 		return Plan{}, err
-	}
-	if compiled != nil && compiled.HasMoves() && !req.DryRun && !s.organizationEnabled {
-		return Plan{}, ErrOrganizationPreviewOnly
 	}
 	matchIgnore := filepath.Match
 	if compiled != nil {
@@ -287,15 +283,12 @@ func (s *Service) Execute(ctx context.Context, plan Plan) (Result, error) {
 		return result, err
 	}
 	if plan.previewOnly && !plan.request.DryRun {
-		return result, ErrOrganizationPreviewOnly
+		return result, ErrReadOnlyPlan
 	}
 	if plan.request.DryRun {
 		return result, nil
 	}
 	if plan.sourceDirectory != nil {
-		if !s.organizationEnabled {
-			return result, ErrOrganizationPreviewOnly
-		}
 		return s.executeOrganization(ctx, plan)
 	}
 	if len(plan.operations) == 0 {

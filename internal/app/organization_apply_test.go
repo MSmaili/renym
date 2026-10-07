@@ -24,7 +24,6 @@ func organizationApplyFixture(t *testing.T, files ...string) (*Service, *history
 	put(t, policy, movePreset(output, "year/month"))
 	store := history.NewStore(t.TempDir(), fs.NewAdapter())
 	service := NewService(nil, store)
-	service.organizationEnabled = true
 	plan, err := service.Plan(context.Background(), Request{Path: input, TemplatePath: policy})
 	if err != nil {
 		t.Fatal(err)
@@ -296,7 +295,6 @@ id='remaining'
 filename='three-renamed.md'
 `, output, second))
 	service := NewService(nil, history.NewStore(t.TempDir(), fs.NewAdapter()))
-	service.organizationEnabled = true
 	plan, err := service.Plan(context.Background(), Request{Path: input, TemplatePath: policy})
 	if err != nil {
 		t.Fatal(err)

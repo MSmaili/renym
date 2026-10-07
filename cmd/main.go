@@ -19,7 +19,7 @@ var globalCfg GlobalConfig
 
 var rootCmd = &cobra.Command{
 	Use:   "renym [flags]",
-	Short: "Fast, safe, cross-platform file rename tool",
+	Short: "Fast, safe, cross-platform file renaming and organization",
 	Long: `Rename files and directories using automatic naming patterns.
 
 Modes:
@@ -29,7 +29,12 @@ Modes:
   camel   → fileName
   snake   → file_name
   kebab   → file-name
-  title   → File Name`,
+  title   → File Name
+
+Templates:
+  --template <name-or-file> uses reusable TOML/YAML rules instead of --mode.
+  Move rules require an explicit --path folder and history for apply.
+  Preview with --dry-run before applying; inspect saved runs with renym history.`,
 	Example: `
   renym -m upper
   renym -m snake -p ./photos

@@ -30,9 +30,6 @@ func (s *Service) undoOrganizationEntry(ctx context.Context, dryRun bool, entry 
 		run.result.DirectoryCleanupCandidates = organizationCleanupCandidates(entry.Organization)
 		return run.result, run.previewOrganizationUndo(ctx, steps)
 	}
-	if !s.organizationEnabled {
-		return run.result, ErrOrganizationPreviewOnly
-	}
 	if err := ctx.Err(); err != nil {
 		return run.result, err
 	}

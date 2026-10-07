@@ -2,6 +2,8 @@
 - [Quick Start](quick-start.md)
 - [Basic Usage](basic-usage.md)
 - [Modes](modes.md)
+- [Templates](templates.md)
+- [Manual Organization](organization.md)
 - [CLI Reference](cli-reference.md)
 - [Safety Overview](safety.md)
   - [Dry Run](dry-run.md)

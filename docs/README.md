@@ -45,7 +45,7 @@ renym undo
 ## Documentation
 
 - [Templates: schema, names, storage, and overrides](templates.md)
-- [Organization previews (experimental, preview only)](organization.md)
+- [Manual organization: preview, apply and undo](organization.md)
 - [Bounded filename patterns](filename-patterns.md)
 
 - [Quick Start](https://github.com/MSmaili/smaili/blob/main/projects/renym-rename-tool/documentation/quick-start.md)

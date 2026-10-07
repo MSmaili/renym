@@ -1,12 +1,10 @@
-# Organization previews — experimental, preview only
+# Manual organization
 
-Templates describe reusable rules and per-rule destinations; the invocation
-selects the input folder. **Moving and
-move undo remain gated pending native CLI acceptance.** Any template containing a move rule requires
-`--dry-run`; without it, the entire workflow fails before discovery/mutation,
-including rename-only rules in that same template. `--skip-history` cannot bypass
-this gate. The journaled workflow is integrated for acceptance testing, but ordinary
-builds remain read-only for moves. Watching and later phases are still deferred.
+Templates describe reusable rules and per-rule destinations; `--path` selects
+the existing input folder. Preview first with `--dry-run`, then omit it to apply
+same-filesystem regular-file moves, renames or both. Organization apply always
+requires history; `--skip-history` is rejected for any move-containing template,
+including its rename-only rules. Watching and AI actions are not implemented.
 
 ```sh
 renym template validate ./examples/templates/organization-preview.toml
@@ -15,14 +13,21 @@ renym --path ~/Downloads --template ./examples/templates/organization-preview.to
 renym --path ~/Downloads --template ./examples/templates/organization-preview.yaml --dry-run
 # Named lookup also works after saving the template in configured storage:
 renym --path ~/Downloads --template organize-downloads --dry-run
+# After checking the destinations and preview, apply explicitly:
+renym --path ~/Downloads --template organize-downloads
+renym history
+# Use the run ID printed by apply; preview undo before restoring:
+renym undo --run <id> --dry-run
+renym undo --run <id>
 ```
 
 The invocation reads `~/Downloads`; the example proposes screenshots beneath
 `~/Pictures/Renym/screenshots/YYYY-MM/`. Choose any existing input folder with
 `--path` and edit the template's destination to your intended output location.
 The same template can be used for several input folders without editing it.
-Nothing creates output folders or writes history
-in preview. Validation checks schema/patterns without requiring existing roots.
+Preview creates no output folders and writes no history. Apply creates missing
+destination directories exclusively and records verified ownership. Validation
+checks schema/patterns without requiring existing roots.
 
 ## Schema additions
 
@@ -70,7 +75,7 @@ directory = 'documents/${file.modified | date("month")}' # optional
 - First-match rules, original snapshots, UTC modification times, per-rule lexical
   indices (including skipped matches), and no fallback remain unchanged.
 
-## Preview safeguards and remaining work
+## Execution safeguards
 
 Previews report occupied/dangling targets, duplicate batch targets, and file versus
 directory namespace conflicts across roots. Sources remain untouched. Accepted
@@ -79,10 +84,19 @@ source/destination filesystem identity mismatches and mount crossings are skippe
 linked/non-directory destination descendants are rejected. Active template/history
 paths remain protected, including ordinary aliases of not-yet-created history paths.
 
-**Read-only checks do not guarantee a later mutation will succeed.** The integrated
-workflow pins and revalidates root/parent handles, uses native rooted no-replace
-moves, and journals directory ownership and verified completion. Public mutation
-remains gated until the integrated workflow passes native CLI acceptance.
+**Read-only checks do not guarantee a later mutation will succeed.** Each CLI
+invocation takes a fresh snapshot. Apply pins and revalidates root/parent handles,
+uses native rooted no-replace moves, and journals directory ownership and verified
+completion. It never copies/deletes to work around a filesystem boundary or
+overwrites an arrival. Existing directories are not adopted as owned; a planned
+missing directory that appears before creation stops that run.
+
+This is not an atomic batch: an error can leave verified file moves or owned
+directories behind. Output reports completed work and the run ID. Known
+pre-mutation failures can leave undoable partial progress; failed checkpoints or
+attempted unverified mutations require reconciliation instead of automatic replay.
+Windows refuses hard-linked move sources; unsupported native APIs fail without
+a weaker fallback.
 
 ## Journals and undo
 
@@ -91,6 +105,10 @@ empty or missing. `renym undo --path <original-folder> --dry-run` and
 `renym undo --run <id> --dry-run` preview eligible undo steps and owned-directory
 cleanup checks. Run-ID selection cannot skip a newer run or uncertain intent;
 actual undo still requires a live, unchanged original input folder.
+Omit `--dry-run` to reverse verified unchanged files into absent original names,
+then remove only owned empty directories deepest-first. Changed files and new
+arrivals stop undo; missing, replaced, linked or populated directories are retained
+with reasons. Once a safe conflict is resolved, a partial undo can resume by ID.
 
 Organization uses schema-2 journals, distinct from schema-1 rename history.
 These records are retained indefinitely, including successful undo audits and

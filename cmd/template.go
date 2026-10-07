@@ -8,7 +8,7 @@ import (
 
 var templateCmd = &cobra.Command{
 	Use:   "template",
-	Short: "Inspect rename presets",
+	Short: "Inspect rename and organization templates",
 }
 
 var validateTemplateCmd = &cobra.Command{
@@ -26,7 +26,7 @@ var validateTemplateCmd = &cobra.Command{
 		spec := compiled.Snapshot()
 		status := ""
 		if compiled.HasMoves() {
-			status = " (organization preview only; use --dry-run)"
+			status = " (organization; explicit --path and apply history required)"
 		}
 		log.Info("Valid template: %s (%d rule(s), kind=%s, recursive=%t)%s\n", compiled.SourcePath(), len(spec.Rules), spec.Selection.Kind, spec.Selection.Recursive, status)
 		return nil

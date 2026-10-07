@@ -101,7 +101,7 @@ mode='snake'
 	}
 	plan.PreviewOnly = false // Editing presentation must not enable mutation.
 	plan.request.DryRun = false
-	if _, err := service.Execute(context.Background(), plan); !errors.Is(err, ErrOrganizationPreviewOnly) {
+	if _, err := service.Execute(context.Background(), plan); !errors.Is(err, ErrReadOnlyPlan) {
 		t.Fatalf("private preview gate bypassed: %v", err)
 	}
 	bytesAt(t, filepath.Join(input, "Screenshot One.PNG"), "image bytes")

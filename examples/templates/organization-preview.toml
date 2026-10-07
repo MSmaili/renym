@@ -1,6 +1,6 @@
-# Experimental preview only. Move application and undo are not available yet.
+# Preview first; apply creates directories and moves files with mandatory history.
 version = 1
-name = "Organize screenshots (preview only)"
+name = "Organize screenshots"
 
 [[rules]]
 id = "screenshots"

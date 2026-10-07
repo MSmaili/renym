@@ -21,21 +21,12 @@ type organizationCLI struct {
 }
 
 func buildOrganizationCLI(t *testing.T) string {
-	return buildCLIForAcceptance(t, true)
-}
-
-func buildCLIForAcceptance(t *testing.T, acceptance bool) string {
 	t.Helper()
 	binary := filepath.Join(t.TempDir(), "renym")
 	if runtime.GOOS == "windows" {
 		binary += ".exe"
 	}
-	args := []string{"build", "-o", binary}
-	if acceptance {
-		args = append(args, "-tags=renym_organization_acceptance")
-	}
-	args = append(args, ".")
-	output, err := exec.Command("go", args...).CombinedOutput()
+	output, err := exec.Command("go", "build", "-o", binary, ".").CombinedOutput()
 	if err != nil {
 		t.Fatalf("build CLI: %v\n%s", err, output)
 	}
@@ -146,6 +137,11 @@ func TestOrganizationCLIAcceptance(t *testing.T) {
 			}
 			cliPut(t, filepath.Join(templateDir, "acceptance."+format), cliOrganizationPolicy(f))
 			before := cliTree(t, f.base)
+			validated := f.run(t, true, "template", "validate", f.policy)
+			cliRequireText(t, validated, "Valid template:", "explicit --path and apply history required")
+			if strings.Contains(validated, "preview only") {
+				t.Fatal("validation still advertises an unavailable workflow")
+			}
 			preview := f.run(t, true, "--path", f.input, "--template", f.policy, "--dry-run")
 			cliRequireText(t, preview, "Would create directory:", "Would move:", "Would rename:", "2026-10")
 			if !reflect.DeepEqual(before, cliTree(t, f.base)) {
@@ -288,6 +284,53 @@ func TestOrganizationCLIAcceptance(t *testing.T) {
 			t.Fatal("cleanup removed populated directory")
 		}
 	})
+	t.Run("undo-selection-validation", func(t *testing.T) {
+		f := newOrganizationCLI(t, binary, "toml")
+		before := cliTree(t, f.base)
+		f.run(t, false, "undo", f.input)
+		f.run(t, false, "undo", "--path", f.input, "--run", "invalid")
+		f.run(t, false, "undo", "--run", "")
+		f.run(t, false, "undo", "--path", "")
+		if !reflect.DeepEqual(before, cliTree(t, f.base)) {
+			t.Fatal("invalid undo selection mutated state")
+		}
+	})
+	for _, format := range []string{"toml", "yaml"} {
+		t.Run("shipped-example-"+format, func(t *testing.T) {
+			f := newOrganizationCLI(t, binary, format)
+			data, err := os.ReadFile(filepath.Join("..", "examples", "templates", "organization-preview."+format))
+			if err != nil {
+				t.Fatal(err)
+			}
+			cliPut(t, f.policy, string(data))
+			original := filepath.Join(f.input, "Screenshot One.PNG")
+			cliPut(t, original, "example image bytes")
+			stamp := time.Date(2026, 10, 7, 1, 2, 3, 0, time.UTC)
+			if err := os.Chtimes(original, stamp, stamp); err != nil {
+				t.Fatal(err)
+			}
+			before := cliTree(t, f.base)
+			cliRequireText(t, f.run(t, true, "template", "validate", f.policy), "Valid template:", "organization;")
+			cliRequireText(t, f.run(t, true, "--path", f.input, "--template", f.policy, "--dry-run"), "Would create directory:", "2026-10")
+			if !reflect.DeepEqual(before, cliTree(t, f.base)) {
+				t.Fatal("example validation/preview mutated state")
+			}
+			id := cliRunID(t, f.run(t, true, "--path", f.input, "--template", f.policy))
+			target := filepath.Join(f.home, "Pictures", "Renym", "screenshots", "2026-10", "screenshot_one.png")
+			data, err = os.ReadFile(target)
+			if err != nil || string(data) != "example image bytes" {
+				t.Fatalf("home-root example target: %q %v", data, err)
+			}
+			cliRequireText(t, f.run(t, true, "undo", "--run", id), "UNDO COMPLETED", "Removed owned directory:")
+			data, err = os.ReadFile(original)
+			if err != nil || string(data) != "example image bytes" {
+				t.Fatalf("example original: %q %v", data, err)
+			}
+			if _, err := os.Lstat(filepath.Join(f.home, "Pictures")); !os.IsNotExist(err) {
+				t.Fatal("example-owned home directories retained")
+			}
+		})
+	}
 }
 
 func cliFindJournal(t *testing.T, root, id string) string {
@@ -308,20 +351,6 @@ func cliFindJournal(t *testing.T, root, id string) string {
 		t.Fatalf("journal %s missing", id)
 	}
 	return found
-}
-
-func TestNormalCLIOrganizationGate(t *testing.T) {
-	f := newOrganizationCLI(t, buildCLIForAcceptance(t, false), "toml")
-	cliPut(t, filepath.Join(f.input, "one.txt"), "original")
-	cliPut(t, f.policy, fmt.Sprintf("version=1\n[[rules]]\nid='all'\n[rules.move]\nroot=%q\n", f.output))
-	before := cliTree(t, f.base)
-	cliRequireText(t, f.run(t, false, "--path", f.input, "--template", f.policy), "gated", "--dry-run")
-	if !reflect.DeepEqual(before, cliTree(t, f.base)) {
-		t.Fatal("normal CLI gate mutated tree/history")
-	}
-	f.run(t, false, "undo", f.input)
-	f.run(t, false, "undo", "--path", f.input, "--run", "invalid")
-	f.run(t, false, "undo", "--run", "")
 }
 
 func cliOrganizationPolicy(f organizationCLI) string {

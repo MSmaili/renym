@@ -1,6 +1,6 @@
 # Undo
 
-Undo reverts rename operations using locally recorded history.
+Undo reverses verified rename and organization operations using locally recorded history.
 
 Undo relies on rename history. If history is missing for an operation, that operation cannot be undone.
 
@@ -36,6 +36,7 @@ Undo works only if:
 - History files are stored in JSON format.
 - `--path` and `--run` are mutually exclusive; positional paths are not accepted.
 - Run-ID selection requires a live original input folder and cannot bypass newer or uncertain runs.
-- Organization apply/undo remains [gated](organization.md); its previews report cleanup candidates, not promises of removal. Organization undo audits are retained rather than deleted.
+- [Organization undo](organization.md) restores only unchanged files into absent original names, then checks owned empty directories. Previews report cleanup candidates, not promises of removal; populated/replaced directories are preserved. Organization undo audits are retained rather than deleted.
+- Safe partial undo can resume after resolving a conflict. Pending/undoing active intent or unverified mutations require reconciliation; never blindly retry them.
 
 ---

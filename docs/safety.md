@@ -28,7 +28,7 @@ Renym records rename operations locally to enable undo functionality.
 
 - Enabled by default
 - Stored per operation
-- Can be skipped explicitly
+- Can be skipped explicitly for ordinary renames; organization apply requires it
 
 See: [History](history.md)
 
@@ -66,11 +66,21 @@ See: [Ignore Rules](ignore.md)
 4. Run the same command without `--dry-run`.
 5. Use `undo` if the result is incorrect.
 
+For organization, inspect [saved runs](history.md) and preview `undo --run <id>`.
+Undo restores only verified unchanged files into absent original names and removes
+only verified owned empty directories. Partial runs are not atomic batches.
+Attempted unverified mutations or checkpoint failures require reconciliation;
+never automatically retry or undo them.
+
 ---
 
 ## Summary
 
-Renym avoids irreversible operations by design.
-Previewing, history, and undo are first-class features and should be used for all non-trivial rename operations.
+Renym prevents overwrites and preserves conservative recovery evidence, but undo
+is not a backup or crash-recovery guarantee. Organization assumes trusted local
+directories and one writer; it does not support hostile namespace changes,
+cross-volume copy/delete, atomic batches or automatic reconciliation. Snapshots
+compare identity/mode/size/mtime, not content hashes. Previewing, history and undo
+should be used for all non-trivial operations.
 
 ---
